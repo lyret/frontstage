@@ -1,0 +1,41 @@
+{
+  "name": "lyrets-server-manager",
+  "description": "Manages all routing, proxying and running of application processes on a server",
+  "author": "Viktor Lyresten <viktor@lyresten.se>",
+  "license": "UNLICESED",
+  "private": true,
+  "engines": {
+    "node": ">14"
+  },
+  "dependencies": {
+    "acme-client": "^5.0.0",
+    "ajv": "^8.11.0",
+    "ajv-formats": "^2.1.1",
+    "chokidar": "^3.5.3",
+    "colors": "^1.4.0",
+    "execa": "^5.1.1",
+    "fs-extra": "^10.1.0",
+    "http-proxy": "^1.18.0",
+    "node-forge": "^0.10.0",
+    "pm2": "^5.2.0",
+    "rxjs": "^7.5.6",
+    "ts-json-validator": "^0.7.1",
+    "ws": "^7.2.0",
+    "yaml": "^2.1.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^9.0.13",
+    "@types/http-proxy": "^1.17.2",
+    "@types/node": "^17.0.35",
+    "@types/node-forge": "^0.8.7",
+    "@types/ws": "^6.0.3",
+    "parcel": "^2.5.0"
+  },
+  "scripts": {
+    "test": "node .dist/index.js test",
+    "deamonize": "node .dist/index.js deamon",
+    "watch": "node .dist/index.js watch",
+    "build": "parcel build index.ts --dist-dir .dist",
+    "clean": "npx rimraf .dist .parcel-cache node_modules"
+  }
+}

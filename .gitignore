@@ -1,0 +1,10 @@
+
+# Parcel
+.dist
+.parcel-cache
+
+# Node
+node_modules
+
+# Mac OS
+.DS_Store
