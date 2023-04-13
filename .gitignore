@@ -1,10 +1,9 @@
-
-# Parcel
-.dist
-.parcel-cache
-
-# Node
+# Code environment
 node_modules
-
-# Mac OS
 .DS_Store
+
+# Builds
+.dist
+
+# Environment variables
+.env
