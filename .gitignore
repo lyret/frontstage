@@ -3,7 +3,10 @@ node_modules
 .DS_Store
 
 # Builds
-.dist
+/.bin
 
 # Environment variables
 .env
+
+# Default app directory
+/apps

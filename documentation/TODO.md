@@ -1,3 +1,13 @@
+Skaru.se behöver stöd för wilda subdomäner vilket inte alls fungerar
+
+
+
+# Roadmap
+
+ - Remove PM2 and use this program to keep other processes running (after what options are needed has stabilized - is clustering needed?)
+
+# server-test.ts
+
 import * as HTTP from 'node:http';
 import { Observable, Subject } from 'rxjs';
 

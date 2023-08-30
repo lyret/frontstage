@@ -63,11 +63,13 @@ declare global {
   // PROCESS MANAGEMENT
 
   var PROCESS_MANAGER_LABEL: string;
+  var PROCESS_MANAGER_SCRIPT: string;
 
   // PATHS
 
-  var APPS_DIRECTORY: string;
   var SOURCE_DIRECTORY: string;
+  var APPS_DIRECTORY: string;
+  var APPS_CONFIG_FILE: string;
 }
 
 export {};

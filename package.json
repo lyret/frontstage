@@ -1,14 +1,14 @@
 {
   "name": "lyrets-server-manager",
-  "description": "Manages all routing, proxying and running of application processes on a server",
+  "description": "Manages all routing, proxying and running of application processes on a server, the goal is to be a portable swiss-army knife for self-hosting",
   "author": "Viktor Lyresten <viktor@lyresten.se>",
   "license": "UNLICECED",
   "private": true,
   "engines": {
-    "node": ">14"
+    "node": ">18"
   },
   "bin": {
-    "manager": "./cli.mjs"
+    "manager": "./program.mjs"
   },
   "dependencies": {
     "@types/fs-extra": "^9.0.13",
@@ -19,7 +19,6 @@
     "acme-client": "^5.0.0",
     "ajv": "^8.11.0",
     "ajv-formats": "^2.1.1",
-    "chokidar": "^3.5.3",
     "colors": "^1.4.0",
     "commander": "^10.0.0",
     "dotenv": "^16.0.3",
