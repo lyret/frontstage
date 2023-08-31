@@ -1,46 +1,48 @@
 import * as Ajv from "ajv";
 import * as AjvFormats from "ajv-formats";
 import * as Yaml from "yaml";
-// TODO: clean up file, document
-/** Validation schema for a hostname anywhere in the apps config */
+
+// Validation schemas for Application properties
+
+const label: Ajv.JSONSchemaType<string> = { type: "string", pattern: "[^s-]" };
+const redirect: Ajv.JSONSchemaType<string> = { type: "string" };
+const serve: Ajv.JSONSchemaType<string> = { type: "string", nullable: true };
+const port: Ajv.JSONSchemaType<number> = { type: "integer" };
 const hostname: Ajv.JSONSchemaType<string> = {
   type: "string",
   format: "hostname",
   nullable: true,
 };
-
-/** Validation schema for the process enty of an app config */
-const process: Ajv.JSONSchemaType<Process> &
-  any /* NOTE: any needed for key:value "env" */ = {
-  type: "object",
-  properties: {
-    script: { type: "string" },
-    cwd: { type: "string", nullable: true },
-    intepreter: { type: "string", nullable: true },
-    args: { type: "string", nullable: true },
-    env: {
-      type: "object",
-      additionalProperties: { anyOf: [{ type: "string" }, { type: "number" }] },
-      nullable: true,
-    },
-  },
-  required: ["script"],
-  additionalProperties: false,
-};
-
-const label = { type: "string", pattern: "[^s-]" };
-const port = { type: "integer" };
-const serve = { type: "string", nullable: true };
-const redirect = { type: "string" };
-const hostnames = {
+const hostnames: Ajv.JSONSchemaType<Array<string>> = {
   type: "array",
   items: hostname,
   minItems: 1,
   uniqueItems: true,
 };
 
-/** Validation schema for a single app config */
-const appSchema: Ajv.JSONSchemaType<App> & any = {
+/** Validation schema for configuring an application process */
+const process: Ajv.JSONSchemaType<Configuration.Application["process"]> & any =
+  {
+    type: "object",
+    properties: {
+      script: { type: "string" },
+      cwd: { type: "string", nullable: true },
+      intepreter: { type: "string", nullable: true },
+      args: { type: "string", nullable: true },
+      env: {
+        type: "object",
+        additionalProperties: {
+          anyOf: [{ type: "string" }, { type: "number" }],
+        },
+        nullable: true,
+      },
+    },
+    required: ["script"],
+    additionalProperties: false,
+  };
+
+/** Validation schema for a individual application */
+const application: Ajv.JSONSchemaType<Configuration.Application> & any = {
   type: "object",
   properties: {
     label,
@@ -83,25 +85,26 @@ const appSchema: Ajv.JSONSchemaType<App> & any = {
   additionalProperties: false,
 };
 
-/** Validation schema for a apps config file */
-const appConfigSchema: Ajv.JSONSchemaType<AppsConfig> = {
+/** Validation schema for the application configuration file */
+const applicationConfiguration: Ajv.JSONSchemaType<
+  Array<Configuration.Application>
+> = {
   type: "array",
-  items: appSchema,
+  items: application,
   minItems: 0,
   uniqueItems: true,
 };
-
-/** The app config configuration */
-type AppsConfig = Array<App>;
 
 /**
  * Validates the given text contents for a valid YAML configuration
  * of applications and returns it as a JSON object
  */
-export function validateAppConfig(contents: string): AppsConfig {
+export function validateAppConfig(
+  contents: string
+): Array<Configuration.Application> {
   const ajv = new Ajv.default();
   AjvFormats.default(ajv);
-  const validator = ajv.compile(appConfigSchema);
+  const validator = ajv.compile(applicationConfiguration);
   const config = Yaml.parse(contents);
   const isValid = validator(config);
 

@@ -2,8 +2,8 @@ import * as JsonDiffPatch from "jsondiffpatch";
 import * as ArrayDifferences from "fast-array-diff";
 
 function findChangedProcesses(
-  prevState: Manager.State,
-  nextState: Manager.State
+  prevState: Manager.ApplicationsState,
+  nextState: Manager.ApplicationsState
 ): Manager.Operations["processes"] {
   // Find modified processes
   let { added, removed } = ArrayDifferences.diff(
@@ -37,8 +37,8 @@ function findChangedProcesses(
 }
 
 function findChangedInternalRoutes(
-  prevState: Manager.State,
-  nextState: Manager.State
+  prevState: Manager.ApplicationsState,
+  nextState: Manager.ApplicationsState
 ): Manager.Operations["internalRoutes"] {
   // Find modified internal routes
   let { added, removed } = ArrayDifferences.diff(
@@ -72,8 +72,8 @@ function findChangedInternalRoutes(
 }
 
 function findChangedHostnames(
-  prevState: Manager.State,
-  nextState: Manager.State
+  prevState: Manager.ApplicationsState,
+  nextState: Manager.ApplicationsState
 ): Manager.Operations["hostnames"] {
   // Find modified hostnames
   let { added, removed } = ArrayDifferences.diff(
@@ -93,8 +93,8 @@ function findChangedHostnames(
 }
 
 export function findOperationsFromChangeOfState(
-  prevState: Manager.State,
-  nextState: Manager.State
+  prevState: Manager.ApplicationsState,
+  nextState: Manager.ApplicationsState
 ): Manager.Operations {
   return {
     processes: findChangedProcesses(prevState, nextState),

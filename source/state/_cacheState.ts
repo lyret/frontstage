@@ -6,12 +6,14 @@ import * as Path from "node:path";
  * Caches the current manager state and return the previous state
  * so that necessary operations can be made from the difference found
  */
-export function cacheManagerState(nextState: Manager.State): Manager.State {
+export function cacheManagerState(
+  nextState: Manager.ApplicationsState
+): Manager.ApplicationsState {
   const pathToCachedState = Path.resolve(BIN_STATE_FILE);
 
   // Retrieve the previous state
-  let prevState: Manager.State = {
-    applications: [],
+  let prevState: Manager.ApplicationsState = {
+    configuration: [],
     internalRoutes: [],
     processes: [],
     redirects: [],

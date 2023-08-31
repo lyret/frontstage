@@ -5,17 +5,17 @@ import * as Path from "node:path";
  * manager state object with list categorised data
  */
 export async function parseStateFromAppConfig(
-  applications: Array<App>
-): Promise<Manager.State> {
+  applications: Array<Configuration.Application>
+): Promise<Manager.ApplicationsState> {
   // Create the resulting next manager state
-  const nextState: Manager.State = {
+  const nextState: Manager.ApplicationsState = {
     redirects: [],
     internalRoutes: [],
     uniqueLabels: [],
     uniqueHostnames: [],
     uniquePorts: [],
     processes: [],
-    applications: applications,
+    configuration: applications,
   };
 
   // Fill the state created above with information from the given application configuration

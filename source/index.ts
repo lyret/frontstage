@@ -1,13 +1,49 @@
-import * as Path from "node:path";
 import * as Pm2 from "./processes/pm2";
-import * as Network from "./network";
 import * as State from "./state";
+
+// This file contains the available functions callable
+// from the CLI program
+// each exported method is imported by program.mjs and
+// executed dynamically on runtime
+
+/** Prints the current status of the server and managed processes */
+export async function status(options: { network: boolean }) {
+  const runners = await Pm2.list();
+  Pm2.disconnect();
+  console.log("RUNNING PROCESSES");
+  console.log(JSON.stringify(runners, null, 4));
+}
+
+/** Reconfigures the manager with modifications to the app config file */
+export async function reload() {
+  console.log("reload");
+}
+
+/** Checks if the current app config file is valid */
+export async function validate(options: { network: boolean }) {
+  console.log("validate");
+}
+
+/** Look up good to know information */
+export async function lookup(options: {
+  domain: string | undefined;
+  port: string | undefined;
+}) {
+  // TODO: Does it go to this server?
+  console.log("lookup", options);
+}
 
 /**
  * The main function executed from the cli interface
  */
 export async function main() {
-  await State.updateManagerState();
+  const state = await State.updateManagerState();
+  console.log("DELTAS");
+  console.log(JSON.stringify(state.operations, null, 4));
+  console.log("NETWORK");
+  console.log(JSON.stringify(state.network, null, 4));
+
+  return;
 
   // TODO: new experiments
   //   for (const { port } of operations.uniquePorts) {
@@ -73,18 +109,6 @@ export async function main() {
   //   console.error(err);
   // }
   // }
-
-  // const domain = "www.väveriet.se";
-  // const r2 = await nslookup(domain);
-  // const r = await myPublicIp();
-  // const r3 = await myLocalIps();
-  //console.log(r, r2, r3);
-
-  // await Pm2.connect();
-  // await Pm2.bootstrap();
-  // const list = await Pm2.list();
-  // console.log(list);
-  // //console.log(bootstrap);
 }
 
 // FIXME: old INDEX.TS

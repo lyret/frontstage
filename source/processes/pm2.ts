@@ -1,54 +1,8 @@
 import * as Path from "node:path";
 import * as PM2 from "pm2";
 
-/**
- * Sanitised process description of a process
- * registred in PM2
- */
-type Process = {
-  /** Unique process name in PM2 */
-  label: string;
-  /** Unique process index for reference in PM2 */
-  index: number;
-  /** Unique process id on the runtime machine */
-  pid: number;
-  /** The namespace the process is running under in PM2 */
-  namespace: string;
-  /** Current status of the process in PM2 */
-  monitor?: {
-    /** The path to the script being executed */
-    script: string;
-    /** The working directory the script is executed from */
-    cwd: string;
-    /** The number of unstable restarts as reported by PM2 */
-    unstable_restarts: number;
-    /** The uptime for the process in PM2 */
-    uptime: number;
-    /** The timestamp for when the process was added to PM2 */
-    createdAt: number;
-    /** The status of the process in PM2 */
-    status: string;
-    /** The amount of memory being used, as reported by PM2 */
-    memory: number;
-    /** The percentage of the CPU dedicated to this process, as reported by PM2 */
-    cpu: number;
-  };
-};
-
-/**
- * Options for adding a process to PM2
- */
-type ProcessOptions = {
-  /** To what namespace this process should be added */
-  namespace: string;
-  /** The path to the script to execute */
-  script: string;
-  /** The path to the working directory to execute from */
-  cwd: string;
-};
-
 /** Transforms a process description to PM2 to a standardised format */
-function transform(proc: PM2.ProcessDescription | undefined): Process {
+function transform(proc: PM2.ProcessDescription | undefined): Process.Status {
   if (!proc) {
     return {
       label: "undefined",
@@ -63,9 +17,10 @@ function transform(proc: PM2.ProcessDescription | undefined): Process {
     index: p.pm_id,
     pid: p.pid,
     namespace: p.pm2_env.namespace,
-    monitor: {
+    details: {
       script: p.pm2_env.pm_exec_path,
       cwd: p.pm2_env.pm_cwd,
+      restarts: p.pm2_env.restart_time,
       unstable_restarts: p.pm2_env.unstable_restarts,
       uptime: p.pm2_env.pm_uptime,
       createdAt: p.pm2_env.created_at,
@@ -93,6 +48,14 @@ export async function connect() {
 }
 
 /**
+ * Disconnects from the PM2 daemon, needs to be called
+ * to not keep the manager process running indefinitely
+ */
+export async function disconnect() {
+  PM2.disconnect();
+}
+
+/**
  * Dumps the current process list in PM2 to file so
  * that the same processes will be restored on restart
  */
@@ -112,7 +75,7 @@ export async function dump() {
  * Get an array of all processes managed by PM2
  */
 export async function list() {
-  return new Promise<Array<Process>>((resolve, reject) => {
+  return new Promise<Array<Process.Status>>((resolve, reject) => {
     PM2.list((err, list) => {
       if (err) {
         reject(err);
@@ -126,7 +89,7 @@ export async function list() {
 /**
  * Get a single process managed by PM2, if found
  */
-export async function find(label: string): Promise<Process | undefined> {
+export async function find(label: string): Promise<Process.Status | undefined> {
   const processes = await list();
   const result = processes.find((process) => process.label == label);
   return result;
@@ -136,7 +99,7 @@ export async function find(label: string): Promise<Process | undefined> {
  * Restart the process with the given label, if found
  */
 export async function restart(label: string) {
-  return new Promise<Process>((resolve, reject) => {
+  return new Promise<Process.Status>((resolve, reject) => {
     PM2.restart(label, (err, proc: any) => {
       if (err) {
         reject(err);
@@ -152,7 +115,7 @@ export async function restart(label: string) {
  * Stops the process with the given label, if found
  */
 export async function stop(label: string) {
-  return new Promise<Process>((resolve, reject) => {
+  return new Promise<Process.Status>((resolve, reject) => {
     PM2.stop(label, (err, proc: any) => {
       if (err) {
         reject(err);
@@ -183,8 +146,8 @@ export async function remove(label: string) {
 /**
  * Start a new process with the given options
  */
-async function start(label: string, options: ProcessOptions) {
-  return new Promise<Process>((resolve, reject) => {
+async function start(label: string, options: Process.Options) {
+  return new Promise<Process.Status>((resolve, reject) => {
     PM2.start({ name: label, ...options }, (err) => {
       if (err) {
         reject(err);
@@ -208,8 +171,8 @@ async function start(label: string, options: ProcessOptions) {
  */
 async function hardrestart(
   label: string,
-  options: ProcessOptions
-): Promise<Process> {
+  options: Process.Options
+): Promise<Process.Status> {
   const proc = await find(label);
   if (proc) {
     await remove(label);
@@ -261,7 +224,7 @@ async function hardrestart(
  * Called to make sure that both PM2 and the daemon of the server
  * manager is running and is up-to-date.
  */
-export async function bootstrap(): Promise<Process> {
+export async function bootstrap(): Promise<Process.Status> {
   await connect();
 
   // Start or restart the PM2 process of the server manager daemon

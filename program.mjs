@@ -28,6 +28,7 @@ const { parsed: customizedEnvVariables } = config({
 const env = parse({ ...defaultEnvVariables, ...customizedEnvVariables });
 env["SOURCE_DIRECTORY"] = env["SOURCE_DIRECTORY"] || installationPath;
 process.env["SOURCE_DIRECTORY"] = env["SOURCE_DIRECTORY"];
+process.env["BIN_DIRECTORY"] = env["BIN_DIRECTORY"];
 for (let key of Object.keys(env)) {
   if (typeof env[key] == "string") {
     env[key] = `"${env[key]}"`;
@@ -41,19 +42,26 @@ for (let key of Object.keys(env)) {
 /**
  * Imports the existing build from the binary directory and executes the given method name
  */
-async function importAndRun(methodName) {
-  const latestBuild = Path.resolve(env["BIN_DIRECTORY"], "index.js");
+async function importAndRun(methodName, ...methodArguments) {
+  // Rebuild the source code if the build option was given
+  const { build } = program.opts();
+  if (build) {
+    await createNewBuild();
+  }
+
+  // Import and run the given method name
+  const latestBuild = Path.resolve(process.env["BIN_DIRECTORY"], "index.js");
   try {
     const module = await import(latestBuild);
     try {
-      await module[methodName]();
+      await module[methodName](...methodArguments);
     } catch (err) {
       console.error(`Failed to execute "${methodName}"`);
-      console.error(err); // TODO: add verbosity
+      console.error(err);
       process.exit(1);
     }
   } catch (err) {
-    console.error("Failed to load latest build");
+    console.error("Failed to load the latest build");
   }
 }
 
@@ -67,7 +75,7 @@ async function createNewBuild() {
     entryPoints: [Path.resolve(installationPath, "source", "index.ts")],
     bundle: true,
     define: env,
-    outdir: Path.resolve(env["BIN_DIRECTORY"]),
+    outdir: Path.resolve(process.env["BIN_DIRECTORY"]),
   };
   const result = await Esbuild.build(buildOptions);
   return result;
@@ -75,46 +83,79 @@ async function createNewBuild() {
 
 // PROGAM DEFINITION ---------------
 
-program.name("manager").description("");
+program
+  .name("manager")
+  .description(
+    "Manages all routing, proxying and running of application processes on a server, the goal is to be a portable swiss-army knife for self-hosting"
+  );
 
-// Add options
+// Add Environment Inspection option
 program.option(
-  "-b, --build",
-  "rebuilds the manager from source before running"
+  "-e, --env",
+  "Prints the current environmental variables set before running",
+  async () => {
+    let output = "\nCurrent environment:\n\n";
+    for (const key of Object.keys(env)) {
+      output += key + ": " + env[key] + "\n";
+    }
+    console.log(output);
+  }
 );
 
-// Parse the options given on execution
-const opts = program.opts();
+// Add rebuild option
+program.option("-b, --build", "Rebuilds the source code before running");
 
-// Add additional help text
-let helpText = "";
-
-// ...add current options to help text
-if (Object.keys(opts).length) {
-  helpText += "\nCurrent options:\n";
-  for (const key of Object.keys(opts)) {
-    helpText += key + ": " + opts[key] + "\n";
-  }
-}
-
-// ...add current environment settings to help text
-helpText += "\nCurrent environment:\n\n";
-for (const key of Object.keys(env)) {
-  helpText += key + ": " + env[key] + "\n";
-}
-
-program.addHelpText("after", helpText);
-
-// Add start command
+// Add Status command
 program
-  .command("start", { isDefault: true })
-  .description("Executes the manager process")
-  .action(async () => {
-    if (opts.build) {
-      await createNewBuild();
-    }
-    await importAndRun("main");
+  .command("status", { isDefault: true })
+  .description("Print the current status of the server and managed processes")
+  .option(
+    "-n, --network",
+    "Also validate and current network, domain and certificate status"
+  )
+  .action(async (opts) => {
+    // opts.network
+    await importAndRun("status", opts);
   });
+
+// Add reload / reconfiguration command
+program
+  .command("reload")
+  .description(
+    "Reconfigure the manager with modifications to the app config file"
+  )
+  .action(async () => {
+    await importAndRun("reload");
+  });
+
+// Add validation command
+program
+  .command("validate")
+  .description("Check if the current app config file is valid")
+  .option(
+    "-n, --network",
+    "Include validation of current network, domain and certificates in the config file"
+  )
+  .action(async (opts) => {
+    await importAndRun("validate", opts);
+  });
+
+// Add Lookup command
+program
+  .command("lookup")
+  .option(
+    "-d, --domain [hostname]",
+    "Look up and print the current status of a hostname and any routes and certificates"
+  )
+  .option(
+    "-p, --port [portnumber]",
+    "Look up and return the current status of a given port"
+  )
+  .description("Look up good to know information")
+  .action(async (options) => {
+    await importAndRun("lookup", options);
+  });
+
 // Add build command
 program
   .command("build")
@@ -122,50 +163,6 @@ program
   .action(async () => {
     await createNewBuild();
   });
-// program
-//   .command("bootstrap")
-//   .description("")
-//   .action(async () => {
-//     await createNewBuild();
-//     //await importLatestBuild("bootstrap");
-//     process.exit(0);
-//   });
-// TODO: finish the program
-//   .command("watch")
-//   .description("")
-//   .action(async () => {
-//     //const result = await esbuild.build(buildOptions);
-//     //console.log(result);
-//     console.log("watch result");
-//   });
-//
-// // Add build command
-// program
-//   .command("test")
-//   .description("")
-//   .action(async () => {
-//     const result = await esbuild.build(buildOptions);
-//     console.log(result);
-//   });
-//
-// // Add deamon command
-// program
-//   .command("deamon")
-//   .description("")
-//   .action(async () => {
-//     const result = await esbuild.build(buildOptions);
-//     console.log(result);
-//   });
-//
-// // Add watch command
-// program
-//   .command("watch")
-//   .description("")
-//   .action(async () => {
-//     const ctx = await esbuild.context(buildOptions);
-//     await ctx.watch();
-//     console.log("watching...");
-//   });
 
 // PROGRAM EXECUTION ---------------
 
