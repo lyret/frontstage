@@ -1,13 +1,24 @@
 import * as Path from "node:path";
 import * as Pm2 from "./processes/pm2";
-import * as Network from "./network/network";
-import * as Apps from "./config/readAppConfig";
+import * as Network from "./network";
+import * as State from "./state";
 
 /**
  * The main function executed from the cli interface
  */
 export async function main() {
-  console.log(await Apps.readAppConfig());
+  await State.updateManagerState();
+
+  // TODO: new experiments
+  //   for (const { port } of operations.uniquePorts) {
+  //     const a = await Network.isPortAvailable(port);
+  //     console.log(port, a);
+  //   }
+  //
+  //   for (const { hostname } of operations.uniqueHostnames) {
+  //     const a = await Network.nslookup(hostname);
+  //     console.log(hostname, a);
+  //   }
 
   //   // If redirections are needed, start a proxy server
   //   if (!isTest && allRedirectes.length) {

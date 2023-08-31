@@ -39,10 +39,10 @@ for (let key of Object.keys(env)) {
 // FUNCTION DEFINITIONS ---------------
 
 /**
- * Imports the existing build from the .bin directory and executes the given method name
+ * Imports the existing build from the binary directory and executes the given method name
  */
 async function importAndRun(methodName) {
-  const latestBuild = Path.resolve(installationPath, ".bin", "index.js");
+  const latestBuild = Path.resolve(env["BIN_DIRECTORY"], "index.js");
   try {
     const module = await import(latestBuild);
     try {
@@ -58,7 +58,7 @@ async function importAndRun(methodName) {
 }
 
 /**
- * Creates a new build in the .bin directory
+ * Creates a new build in the binary directory
  */
 async function createNewBuild() {
   const buildOptions = {
@@ -67,7 +67,7 @@ async function createNewBuild() {
     entryPoints: [Path.resolve(installationPath, "source", "index.ts")],
     bundle: true,
     define: env,
-    outdir: Path.resolve(installationPath, ".bin"),
+    outdir: Path.resolve(env["BIN_DIRECTORY"]),
   };
   const result = await Esbuild.build(buildOptions);
   return result;

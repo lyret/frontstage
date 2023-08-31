@@ -1,15 +1,16 @@
 import * as Ajv from "ajv";
 import * as AjvFormats from "ajv-formats";
 import * as Yaml from "yaml";
-
+// TODO: clean up file, document
 /** Validation schema for a hostname anywhere in the apps config */
-const hostnameSchema: Ajv.JSONSchemaType<Hostname> = {
+const hostname: Ajv.JSONSchemaType<string> = {
   type: "string",
   format: "hostname",
+  nullable: true,
 };
 
 /** Validation schema for the process enty of an app config */
-const processSchema: Ajv.JSONSchemaType<Process> &
+const process: Ajv.JSONSchemaType<Process> &
   any /* NOTE: any needed for key:value "env" */ = {
   type: "object",
   properties: {
@@ -27,56 +28,38 @@ const processSchema: Ajv.JSONSchemaType<Process> &
   additionalProperties: false,
 };
 
-/** Validation schema for the routing enrty of an app config */
-const routingSchema: Ajv.JSONSchemaType<Routing> & any = {
-  type: "object",
-  oneOf: [
-    {
-      properties: {
-        redirects: {
-          type: "array",
-          items: hostnameSchema,
-          minItems: 1,
-          uniqueItems: true,
-          nullable: true,
-        },
-        directory: { type: "string", nullable: true },
-        hostname: { ...hostnameSchema, nullable: true },
-      },
-      required: ["port", "hostname"],
-      additionalProperties: false,
-    },
-    {
-      properties: {
-        redirects: { type: "array", items: hostnameSchema, nullable: true },
-        directory: { type: "string", nullable: true },
-      },
-      additionalProperties: false,
-    },
-  ],
+const label = { type: "string", pattern: "[^s-]" };
+const port = { type: "integer" };
+const serve = { type: "string", nullable: true };
+const redirect = { type: "string" };
+const hostnames = {
+  type: "array",
+  items: hostname,
+  minItems: 1,
+  uniqueItems: true,
 };
 
 /** Validation schema for a single app config */
 const appSchema: Ajv.JSONSchemaType<App> & any = {
   type: "object",
   properties: {
-    label: { type: "string", pattern: "[^s-]" },
-    port: { type: "integer" },
-    process: processSchema,
-    routing: routingSchema,
-    redirect: { type: "string" },
-    hostname: { ...hostnameSchema, nullable: true },
-    hostnames: {
-      type: "array",
-      items: hostnameSchema,
-      minItems: 1,
-      uniqueItems: true,
-    },
+    label,
+    process,
+    serve,
+    port,
+    redirect,
+    hostname,
+    hostnames,
   },
   anyOf: [
     // to Redirect
     {
       required: ["redirect"],
+      anyOf: [{ required: ["hostname"] }, { required: ["hostnames"] }],
+    },
+    // to Static File Serve
+    {
+      required: ["serve"],
       anyOf: [{ required: ["hostname"] }, { required: ["hostnames"] }],
     },
     // to Port
@@ -112,8 +95,8 @@ const appConfigSchema: Ajv.JSONSchemaType<AppsConfig> = {
 type AppsConfig = Array<App>;
 
 /**
- * Validates the given text if it contains valid YAML for the application configuration
- * and returns it as a JSON object
+ * Validates the given text contents for a valid YAML configuration
+ * of applications and returns it as a JSON object
  */
 export function validateAppConfig(contents: string): AppsConfig {
   const ajv = new Ajv.default();

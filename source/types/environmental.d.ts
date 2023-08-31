@@ -1,3 +1,6 @@
+/*
+ * Defines global environmental variables that are always available
+ */
 declare global {
   // LOGGING
 
@@ -70,6 +73,8 @@ declare global {
   var SOURCE_DIRECTORY: string;
   var APPS_DIRECTORY: string;
   var APPS_CONFIG_FILE: string;
+  var BIN_DIRECTORY: string;
+  var BIN_STATE_FILE: string;
 }
 
 export {};

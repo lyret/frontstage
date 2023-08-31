@@ -67,7 +67,7 @@ export async function myLocalIps() {
 let cachedLocalIps: string[];
 
 /**
- * Returns whenever a given network port is currently free or not
+ * Returns whenever a given network port is currently free or not on the runtime machine
  */
 export async function isPortAvailable(port: number) {
   return new Promise<boolean>((resolve) => {
