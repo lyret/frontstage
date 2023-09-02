@@ -2,6 +2,7 @@
  * Defines global environmental variables that are always available
  */
 declare global {
+  // TODO: Document all env variables
   // LOGGING
 
   /**
@@ -51,13 +52,15 @@ declare global {
    * once the application server is confirmed to be reachable and
    * requests are processed correctly
    */
-  var LETS_ENCRYPT_PRODUCTION: boolean = true;
-  var LETS_ENCRYPT_SELF_SIGN_ENABLED: boolean = false;
-  var LETS_ENCRYPT_EMAIL: string = "viktor@lyresten.se";
-  var LETS_ENCRYPT_SELF_SIGN_COUNTRY: string = "Sweden";
-  var LETS_ENCRYPT_SELF_SIGN_STATE: string = "Västra Götaland";
-  var LETS_ENCRYPT_SELF_SIGN_LOCALITY: string = "Uddebo";
-  var LETS_ENCRYPT_SELF_SIGN_ORGANIZATION: string = "Testgrupp";
+  var LETS_ENCRYPT_CERTIFICATES_ENABLED: boolean;
+  var LETS_ENCRYPT_CERTIFICATES_PRODUCTION: boolean;
+  var LETS_ENCRYPT_CERTIFICATES_EMAIL: string;
+
+  var SELF_SIGN_CERTIFICATES_ENABLED: boolean;
+  var SELF_SIGN_CERTIFICATES_COUNTRY: string;
+  var SELF_SIGN_CERTIFICATES_STATE: string;
+  var SELF_SIGN_CERTIFICATES_LOCALITY: string;
+  var SELF_SIGN_CERTIFICATES_ORGANIZATION: string;
 
   // REDIRECTION PROXY
 
@@ -74,7 +77,22 @@ declare global {
   var APPS_DIRECTORY: string;
   var APPS_CONFIG_FILE: string;
   var BIN_DIRECTORY: string;
+  var CERTIFICATES_DIRECTORY: string;
   var BIN_STATE_FILE: string;
+
+  // CONSTANTS
+
+  /** One hour in milliseconds */
+  var ONE_HOUR: number;
+
+  /** One day in milliseconds */
+  var ONE_DAY: number;
+
+  /** One month in milliseconds */
+  var ONE_MONTH: number;
+
+  /** Three months in milliseconds */
+  var THREE_MONTHS: number;
 }
 
 export {};

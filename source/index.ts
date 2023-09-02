@@ -1,4 +1,5 @@
-import * as Pm2 from "./processes/pm2";
+import * as Certificates from "./certificates";
+import * as ProcessManager from "./processes/pm2";
 import * as State from "./state";
 
 // This file contains the available functions callable
@@ -8,14 +9,25 @@ import * as State from "./state";
 
 /** Prints the current status of the server and managed processes */
 export async function status(options: { network: boolean }) {
-  const runners = await Pm2.list();
-  Pm2.disconnect();
+  const state = await State.updateManagerState();
+  const runners = await ProcessManager.list();
+  ProcessManager.disconnect();
+  await Certificates.bootstrap();
+  const certs = Certificates.list();
+
   console.log("RUNNING PROCESSES");
   console.log(JSON.stringify(runners, null, 4));
+  console.log("DELTAS");
+  console.log(JSON.stringify(state.operations, null, 4));
+  console.log("NETWORK");
+  console.log(JSON.stringify(state.network, null, 4));
+  console.log("CERTIFICATATES");
+  console.log(JSON.stringify(certs, null, 4));
 }
 
 /** Reconfigures the manager with modifications to the app config file */
 export async function reload() {
+  // TODO: testcode
   console.log("reload");
 }
 
@@ -37,12 +49,6 @@ export async function lookup(options: {
  * The main function executed from the cli interface
  */
 export async function main() {
-  const state = await State.updateManagerState();
-  console.log("DELTAS");
-  console.log(JSON.stringify(state.operations, null, 4));
-  console.log("NETWORK");
-  console.log(JSON.stringify(state.network, null, 4));
-
   return;
 
   // TODO: new experiments

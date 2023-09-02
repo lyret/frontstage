@@ -6,59 +6,6 @@ export {};
  */
 declare global {
   /**
-   * Type definitions for the process manager
-   */
-  namespace Process {
-    /**
-     * Sanitised process description of a process
-     * registred in PM2
-     */
-    type Status = {
-      /** Unique process name in PM2 */
-      label: string;
-      /** Unique process index for reference in PM2 */
-      index: number;
-      /** Unique process id on the runtime machine */
-      pid: number;
-      /** The namespace the process is running under in PM2 */
-      namespace: string;
-      /** Additional details of the process in PM2 */
-      details?: {
-        /** The path to the script being executed */
-        script: string;
-        /** The working directory the script is executed from */
-        cwd: string;
-        /** The number of restarts as reported by PM2 */
-        restarts: number;
-        /** The number of unstable restarts as reported by PM2 */
-        unstable_restarts: number;
-        /** The uptime for the process in PM2 */
-        uptime: number;
-        /** The timestamp for when the process was added to PM2 */
-        createdAt: number;
-        /** The status of the process in PM2 */
-        status: string;
-        /** The amount of memory being used, as reported by PM2 */
-        memory: number;
-        /** The percentage of the CPU dedicated to this process, as reported by PM2 */
-        cpu: number;
-      };
-    };
-
-    /**
-     * Options for adding a new process to PM2
-     */
-    type Options = {
-      /** To what namespace this process should be added */
-      namespace: string;
-      /** The path to the script to execute */
-      script: string;
-      /** The path to the working directory to execute from */
-      cwd: string;
-    };
-  }
-
-  /**
    * Type definitions for the internal state
    * of the server manager
    */
@@ -151,7 +98,13 @@ declare global {
     };
   }
 
+  /**
+   * Type definitions for configuration of the server manager
+   */
   namespace Configuration {
+    /**
+     * Application configuration
+     */
     type Application = {
       /** Unique identifying name for this application */
       label: string;
@@ -186,19 +139,93 @@ declare global {
     };
   }
 
-  // TODO: Old Types for Assets, remove when possible
+  /**
+   * Type definitions for running processes
+   */
+  namespace Process {
+    /**
+     * Sanitised process description of a process
+     * registred in PM2
+     */
+    type Status = {
+      /** Unique process name in PM2 */
+      label: string;
+      /** Unique process index for reference in PM2 */
+      index: number;
+      /** Unique process id on the runtime machine */
+      pid: number;
+      /** The namespace the process is running under in PM2 */
+      namespace: string;
+      /** Additional details of the process in PM2 */
+      details?: {
+        /** The path to the script being executed */
+        script: string;
+        /** The working directory the script is executed from */
+        cwd: string;
+        /** The number of restarts as reported by PM2 */
+        restarts: number;
+        /** The number of unstable restarts as reported by PM2 */
+        unstable_restarts: number;
+        /** The uptime for the process in PM2 */
+        uptime: number;
+        /** The timestamp for when the process was added to PM2 */
+        createdAt: number;
+        /** The status of the process in PM2 */
+        status: string;
+        /** The amount of memory being used, as reported by PM2 */
+        memory: number;
+        /** The percentage of the CPU dedicated to this process, as reported by PM2 */
+        cpu: number;
+      };
+    };
 
-  type Asset<T extends object = {}> = T & {
-    close: () => void;
-  };
+    /**
+     * Options for adding a new process to PM2
+     */
+    type Options = {
+      /** To what namespace this process should be added */
+      namespace: string;
+      /** The path to the script to execute */
+      script: string;
+      /** The path to the working directory to execute from */
+      cwd: string;
+    };
+  }
 
-  type AssetOf<T extends AssetGenerator<any, any>> = ReturnType<T>;
+  /**
+   * Type definitions for certificates
+   */
+  namespace Certificates {
+    /**
+     * Certificate description for available and loaded certificates
+     */
+    type Certificate = {
+      /** Hostname this certificate is valid for */
+      hostname: string;
+      /** Method used to add and renew this certificate */
+      renewalMethod: "lets-encrypt" | "self-signed" | "default";
+      /** The time in milliseconds, before expiration that the certificate should be renewed */
+      renewWithin: number;
+      /** The date time for the expiration of this certificates validity */
+      expiresOn: Date;
+      /** The common name of the certificate */
+      commonName: string;
+      /** The context object used for https transport */
+      secureContext: TLS.SecureContext;
+    };
 
-  type AssetGenerator<
-    Options extends object = {},
-    AssetDefinition extends object = {}
-  > = (options: Options) => Asset<AssetDefinition>;
-
-  type AssetGeneratorWithoutOptions<AssetDefinition extends object = {}> =
-    () => Asset<AssetDefinition>;
+    /** A certificate as stored in the file system cache as JSON */
+    type CachedCertificate = {
+      /** Hostname this certificate is valid for */
+      hostname: string;
+      /** Method used to renew this certificate */
+      renewalMethod: "lets-encrypt" | "self-signed" | "default";
+      /** The time in milliseconds, before expiration that the certificate should be renewed */
+      renewWithin: number;
+      /** The PEM certificate(s) */
+      certificate: string | string[];
+      /** The PEM private key(s) */
+      privateKey: string | string[];
+    };
+  }
 }

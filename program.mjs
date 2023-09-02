@@ -2,21 +2,22 @@
 // SERVER MANAGER PROGRAM
 // This file defines the cli program with available commands used to interact
 // with the managed processes on the server
-//
-// The daemon process that is always running is implemented in ./daemon.mjs
 
 import * as Esbuild from "esbuild";
 import * as Path from "node:path";
+import * as FSE from "fs-extra";
 import { program } from "commander";
 import { config } from "dotenv";
 import { parse } from "dotenv-parse";
 import { fileURLToPath } from "node:url";
+import { constants } from "./constants.mjs";
 
 // ENVIRONMENT VARIABLES CONFIGURATION ----------
 
 /** The path to the directory of this program file */
 const installationPath = Path.dirname(fileURLToPath(import.meta.url));
 
+// Add global variables from .defaults.env and .env files
 const { parsed: defaultEnvVariables } = config({
   override: true,
   path: Path.resolve(installationPath, ".defaults.env"),
@@ -25,10 +26,23 @@ const { parsed: customizedEnvVariables } = config({
   override: true,
   path: Path.resolve(installationPath, ".env"),
 });
-const env = parse({ ...defaultEnvVariables, ...customizedEnvVariables });
+let env = parse({ ...defaultEnvVariables, ...customizedEnvVariables });
+
+// Add global variables from the imported constants
+env = { ...env, ...constants };
+
+// Make sure the necessary directories are available for making builds
+// and that they exist
 env["SOURCE_DIRECTORY"] = env["SOURCE_DIRECTORY"] || installationPath;
 process.env["SOURCE_DIRECTORY"] = env["SOURCE_DIRECTORY"];
 process.env["BIN_DIRECTORY"] = env["BIN_DIRECTORY"];
+process.env["CERTIFICATES_DIRECTORY"] = env["CERTIFICATES_DIRECTORY"];
+FSE.ensureDir(env["SOURCE_DIRECTORY"]);
+FSE.ensureDir(env["BIN_DIRECTORY"]);
+FSE.ensureDir(env["CERTIFICATES_DIRECTORY"]);
+
+// Format the env object correctly for defining global variables
+// in the build file
 for (let key of Object.keys(env)) {
   if (typeof env[key] == "string") {
     env[key] = `"${env[key]}"`;
@@ -37,7 +51,7 @@ for (let key of Object.keys(env)) {
   }
 }
 
-// FUNCTION DEFINITIONS ---------------
+// FUNCTIONS ---------------
 
 /**
  * Imports the existing build from the binary directory and executes the given method name

@@ -5,6 +5,9 @@ node_modules
 # Builds
 /.bin
 
+# Certificates
+/.certificates
+
 # Environment variables
 .env
 

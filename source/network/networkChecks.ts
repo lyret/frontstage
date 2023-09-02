@@ -2,6 +2,19 @@ import * as HTTP from "node:http";
 import * as DNS from "node:dns";
 import * as NET from "node:net";
 import * as OS from "node:os";
+import * as Output from "../output";
+
+// This file contains utility methods for checking network status of the runtime
+// machine and getting related network information
+
+/** Logger */
+const logger = Output.createLogger("Network");
+
+/** Runtime cache of the current public ip address */
+let cachedPublicIp: string;
+
+/** Runtime cache of the current local ip addresses */
+let cachedLocalIps: string[];
 
 /**
  * Returns the primary ip address of the given hostname (domain) according
@@ -29,18 +42,31 @@ export async function myPublicIp() {
   if (cachedPublicIp) {
     return cachedPublicIp;
   }
-  return new Promise<string>((resolve) => {
-    HTTP.get({ host: "api.ipify.org", port: 80, path: "/" }, (res) => {
-      res.on("data", function (ip) {
-        cachedPublicIp = String(ip);
-        resolve(cachedPublicIp);
+  try {
+    const ip = await new Promise<string>((resolve, reject) => {
+      const client = HTTP.get(
+        { host: "api.ipify.org", port: 80, path: "/" },
+        (res) => {
+          res.on("data", (ip) => {
+            cachedPublicIp = String(ip);
+            resolve(cachedPublicIp);
+          });
+          res.on("clientError", (err) => {
+            reject(err);
+          });
+        }
+      );
+      client.on("error", (err) => {
+        reject(err);
       });
     });
-  });
-}
 
-// Runtime cache of the current public ip address
-let cachedPublicIp: string;
+    return ip;
+  } catch (err) {
+    logger.error("Unable to get the public ip address", err);
+    return "";
+  }
+}
 
 /**
  * Returns a list of the runtime machines internal and local ip addresses
@@ -51,20 +77,22 @@ export async function myLocalIps() {
     return cachedLocalIps;
   }
   return new Promise<string[]>((resolve) => {
-    const interfaces = OS.networkInterfaces();
+    try {
+      const interfaces = OS.networkInterfaces();
 
-    cachedLocalIps = Object.values(interfaces)
-      .flat()
-      .filter((address) => {
-        return address && address.family == "IPv4";
-      })
-      .map((address) => address!.address);
-    resolve(cachedLocalIps);
+      cachedLocalIps = Object.values(interfaces)
+        .flat()
+        .filter((address) => {
+          return address && address.family == "IPv4";
+        })
+        .map((address) => address!.address);
+      resolve(cachedLocalIps);
+    } catch (err) {
+      logger.error("Unable to get the local ip addresses", err);
+      resolve([]);
+    }
   });
 }
-
-// Runtime cache of the current local ip addresses
-let cachedLocalIps: string[];
 
 /**
  * Returns whenever a given network port is currently free or not on the runtime machine

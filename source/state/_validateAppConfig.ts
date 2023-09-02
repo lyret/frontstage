@@ -50,6 +50,7 @@ const application: Ajv.JSONSchemaType<Configuration.Application> & any = {
     serve,
     port,
     redirect,
+    certificates,
     hostname,
     hostnames,
   },
