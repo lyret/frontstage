@@ -62,6 +62,7 @@ declare global {
       /** List of all unique hostnames found */
       uniqueHostnames: Array<{
         label: string;
+        renewalMethod: Certificates.Certificate["renewalMethod"];
         hostname: string;
       }>;
       /** List of all internal ports registered */
@@ -112,6 +113,8 @@ declare global {
       hostname?: Hostname;
       /** A list of several hostnames to use for routing traffic to this application */
       hostnames?: Array<Hostname>;
+      /** The renewal method for certificates for hostname(s) of the application */
+      certificates: Certificates.Certificate["renewalMethod"];
       /** (Optional) URL to route incoming web traffic to */
       redirect: string;
       /** (Optional) Directory to serve static files from */
@@ -217,11 +220,11 @@ declare global {
     /** A certificate as stored in the file system cache as JSON */
     type CachedCertificate = {
       /** Hostname this certificate is valid for */
-      hostname: string;
+      hostname: Certificates.Certificate["hostname"];
       /** Method used to renew this certificate */
-      renewalMethod: "lets-encrypt" | "self-signed" | "default";
+      renewalMethod: Certificates.Certificate["renewalMethod"];
       /** The time in milliseconds, before expiration that the certificate should be renewed */
-      renewWithin: number;
+      renewWithin: Certificates.Certificate["renewWithin"];
       /** The PEM certificate(s) */
       certificate: string | string[];
       /** The PEM private key(s) */

@@ -53,6 +53,7 @@ export async function parseStateFromAppConfig(
         nextState.uniqueHostnames.push({
           hostname: foundHostname,
           label: app.label,
+          renewalMethod: app.certificates || "default",
         });
       }
     }

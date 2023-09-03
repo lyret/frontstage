@@ -26,8 +26,6 @@ export function find(hostname: string): Certificates.Certificate | undefined {
   return loadedCertificates.get(hostname);
 }
 
-// TODO: renewal method should be settable in app config
-
 /**
  * Renews an existing certificate for the given hostname, with several tries. Optionally the renewal can be forced to run even before the
  * existing certificate expires

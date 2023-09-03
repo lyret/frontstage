@@ -1,5 +1,7 @@
 import * as Colors from "colors/safe";
 
+// TODO: log level should be settable in CLI
+
 /** Registry of available log levels */
 export const LogLevels = {
   debug: { level: 60, color: Colors.blue, name: "Debug" },

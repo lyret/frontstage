@@ -2,7 +2,7 @@ import * as Certificates from "./certificates";
 import * as ProcessManager from "./processes/pm2";
 import * as State from "./state";
 
-// This file contains the available functions callable
+// This file contains the available commands callable
 // from the CLI program
 // each exported method is imported by program.mjs and
 // executed dynamically on runtime

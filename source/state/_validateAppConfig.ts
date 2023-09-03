@@ -6,6 +6,10 @@ import * as Yaml from "yaml";
 
 const label: Ajv.JSONSchemaType<string> = { type: "string", pattern: "[^s-]" };
 const redirect: Ajv.JSONSchemaType<string> = { type: "string" };
+const certificates: Ajv.JSONSchemaType<string> = {
+  type: "string",
+  isCertificate: true,
+};
 const serve: Ajv.JSONSchemaType<string> = { type: "string", nullable: true };
 const port: Ajv.JSONSchemaType<number> = { type: "integer" };
 const hostname: Ajv.JSONSchemaType<string> = {
@@ -105,6 +109,22 @@ export function validateAppConfig(
 ): Array<Configuration.Application> {
   const ajv = new Ajv.default();
   AjvFormats.default(ajv);
+
+  // AJV Custom validators
+  const availableCertificateTypes = ["lets-encrypt", "self-signed"];
+  ajv.addKeyword({
+    keyword: "isCertificate",
+    type: "string",
+    error: {
+      message: `Must be an available way to retrive a certificate: "${availableCertificateTypes.join(
+        `", "`
+      )}",`,
+    },
+    validate: (_: any, data: string) => {
+      return availableCertificateTypes.includes(data);
+    },
+  });
+
   const validator = ajv.compile(applicationConfiguration);
   const config = Yaml.parse(contents);
   const isValid = validator(config);
