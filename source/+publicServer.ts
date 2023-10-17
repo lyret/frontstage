@@ -2,10 +2,11 @@ import * as HTTP from "node:http";
 import * as HTTPS from "node:https";
 import * as NET from "node:net";
 import * as Path from "node:path";
-import * as InternalRoutes from "./internalRoutes";
-import * as Redirections from "./redirections";
-import * as Certificates from "../certificates";
-import * as Output from "../output";
+import * as InternalRoutes from "./traffic/internalRoutes";
+import * as Redirections from "./traffic/redirections";
+import * as Output from "./traffic/httpHandlers";
+import * as Certificates from "./certificates";
+import { createLogger } from "./statistics";
 
 // PUBLIC SERVER
 // This is a subprocess of the server manager, it is build and loaded in the process manager
@@ -13,7 +14,7 @@ import * as Output from "../output";
 // hostnames should be simplyfied in certificates (from *.asda.se to asda.se and handled here ?)
 
 /** Logger */
-const logger = Output.createLogger("Public Server");
+const logger = createLogger("Public Server");
 
 /**
  * Creates and runs one or two servers for handling the incoming HTTP and HTTPS traffic
@@ -120,7 +121,7 @@ function handleIncomingRequest(
     return InternalRoutes.handleHTTPRequest(hostname, req, res);
   } catch (err) {
     logger.error(`Failed to handle request`, err);
-    return Output.Http.NotFound(req, res);
+    return Output.NotFound(req, res);
   }
 }
 
@@ -140,7 +141,7 @@ function upgradeWebsocketRequest(
     return InternalRoutes.handleWebsocketUpgrade(hostname, req, socket, head);
   } catch (err) {
     logger.error(`Failed to handle websocket upgrade request`, err);
-    return Output.Http.NotFound(req, socket);
+    return Output.NotFound(req, socket);
   }
 }
 
@@ -169,10 +170,10 @@ function redirectFromHTTPtoHTTPS(
 
     // Send a redirection response to the client
     logger.trace(`Redirecting ${targetHostname}${targetUrl} to ${targetHref}`);
-    return Output.Http.Redirected(req, res, targetHref);
+    return Output.Redirected(req, res, targetHref);
   } catch (err) {
     logger.error(`Failed to redirect request to https`, err);
-    return Output.Http.BadRequest(req, res);
+    return Output.BadRequest(req, res);
   }
 }
 

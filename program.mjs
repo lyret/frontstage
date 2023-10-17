@@ -64,11 +64,7 @@ async function importAndRun(methodName, ...methodArguments) {
   }
 
   // Import and run the given method name
-  const latestBuild = Path.resolve(
-    process.env["BIN_DIRECTORY"],
-    "commands",
-    "+program.js"
-  );
+  const latestBuild = Path.resolve(process.env["BIN_DIRECTORY"], "+program.js");
   try {
     const module = await import(latestBuild);
     try {
@@ -89,17 +85,18 @@ async function importAndRun(methodName, ...methodArguments) {
 async function createNewBuilds() {
   // Entry points to build
   const entryPoints = [
-    ["commands", "program"],
-    ["commands", "scheduler"],
-    ["routes", "publicServer"],
-  ].map(([folder, fileName]) =>
-    Path.resolve(installationPath, "source", folder, `+${fileName}.ts`)
-  );
+    "program",
+    "schedulerDaemon",
+    "publicServer",
+    "fileAccessServer",
+  ];
 
   const buildOptions = {
     platform: "node",
     packages: "external",
-    entryPoints,
+    entryPoints: entryPoints.map((fileName) =>
+      Path.resolve(installationPath, "source", `+${fileName}.ts`)
+    ),
     bundle: true,
     define: env,
     outdir: Path.resolve(process.env["BIN_DIRECTORY"]),
@@ -116,10 +113,22 @@ program
     "Manages all routing, proxying and running of application processes on a server, the goal is to be a portable swiss-army knife for self-hosting"
   );
 
+// Add option for setting the current Log Level to something other than
+// whats stated in .env
+program.option(
+  "-ll, --log-level <value>",
+  "Override the current log level set in .env, value should be between 0 and 100. Requires the source code to be rebuiled",
+  async (value) => {
+    if (!Number.isNaN(Number(value))) {
+      env["LOG_LEVEL"] = `${value}`;
+    }
+  }
+);
+
 // Add Environment Inspection option
 program.option(
   "-e, --env",
-  "Prints the current environmental variables set before running",
+  "Prints the current environmental variables set before continuing",
   async () => {
     let output = "\nCurrent environment:\n\n";
     for (const key of Object.keys(env)) {

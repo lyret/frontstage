@@ -17,4 +17,4 @@ constants["ONE_DAY"] = constants["ONE_HOUR"] * 24;
 constants["ONE_MONTH"] = constants["ONE_DAY"] * 30;
 
 /** Three months in milliseconds */
-constants["THREE_MONTHS"] = constants["THREE_MONTHS"] * 3;
+constants["THREE_MONTHS"] = constants["ONE_MONTH"] * 3;

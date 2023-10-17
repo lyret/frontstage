@@ -2,11 +2,11 @@ import * as Path from "node:path";
 import * as TLS from "node:tls";
 import * as Forge from "node-forge";
 import * as FSE from "fs-extra";
-import * as Output from "../output";
 import { normalizeName } from "./_utilities";
+import { createLogger } from "../statistics";
 
 /** Logger */
-const logger = Output.createLogger("Certificates");
+const logger = createLogger("Certificates");
 
 /**
  * Create a certificate object from the given options object

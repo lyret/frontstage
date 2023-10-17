@@ -1,6 +1,8 @@
 import * as JsonDiffPatch from "jsondiffpatch";
 import * as ArrayDifferences from "fast-array-diff";
 
+// TODO: is this file used?
+
 function findChangeInApplicationState<
   Key extends keyof Manager.ApplicationsState
 >(

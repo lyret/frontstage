@@ -1,8 +1,8 @@
 import * as Forge from "node-forge";
-import * as Output from "../output";
+import { createLogger } from "../statistics";
 
 /** Logger */
-const logger = Output.createLogger("Self Signed Certificate");
+const logger = createLogger("Self Signed Certificate");
 
 /**
  * Generats a self-signed certificate with the globally defined options

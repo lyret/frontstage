@@ -2,7 +2,7 @@ import * as Path from "node:path";
 
 /**
  * Parses the given list of applications for various errors and returns a
- * manager state object with list categorised data
+ * manager state object
  */
 export async function parseStateFromAppConfig(
   applications: Array<Configuration.Application>

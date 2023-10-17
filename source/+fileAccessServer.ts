@@ -1,3 +1,4 @@
+// TODO (2024): continue with the ftp access module: https://www.npmjs.com/package/@nearst/ftp
 // import * as Path from "node:path";
 //
 // // Quick start, create an active ftp server.
@@ -9,7 +10,6 @@
 //   anonymous: false,
 // });
 //
-// // TODO: continue: https://www.npmjs.com/package/@nearst/ftp
 //
 // ftpServer.on("login", ({ username, password }, resolve, reject) => {
 //   if (username === "abc" && password === "123") {

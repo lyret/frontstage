@@ -2,10 +2,10 @@
 node_modules
 .DS_Store
 
-# Builds
+# Default output for transpiled source code
 /.bin
 
-# Certificates
+# Default certificates folder
 /.certificates
 
 # Environment variables
@@ -13,3 +13,6 @@ node_modules
 
 # Default app directory
 /apps
+
+# Configuration file
+configuration.yaml

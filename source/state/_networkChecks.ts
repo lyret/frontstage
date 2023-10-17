@@ -2,13 +2,13 @@ import * as HTTP from "node:http";
 import * as DNS from "node:dns";
 import * as NET from "node:net";
 import * as OS from "node:os";
-import * as Output from "../output";
+import { createLogger } from "../statistics";
 
 // This file contains utility methods for checking network status of the runtime
 // machine and getting related network information
 
 /** Logger */
-const logger = Output.createLogger("Network");
+const logger = createLogger("Network");
 
 /** Runtime cache of the current public ip address */
 let cachedPublicIp: string;

@@ -4,7 +4,7 @@ import * as Path from "node:path";
 
 /**
  * Caches the current manager state and return the previous state
- * so that necessary operations can be made from the difference found
+ * so that necessary operations can be made from the differences found
  */
 export function cacheManagerState(
   nextState: Manager.ApplicationsState

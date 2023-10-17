@@ -3,6 +3,7 @@ import * as AjvFormats from "ajv-formats";
 import * as Yaml from "yaml";
 
 // Validation schemas for Application properties
+// TODO: Use ZOD instead
 
 const label: Ajv.JSONSchemaType<string> = { type: "string", pattern: "[^s-]" };
 const redirect: Ajv.JSONSchemaType<string> = { type: "string" };

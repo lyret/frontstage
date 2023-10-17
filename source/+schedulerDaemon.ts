@@ -14,9 +14,9 @@
  *
  * Useful as the 'timeout' in node is only good for about 24 days.
  */
-// TODO: document
+// TODO: document and continue with this
 
-import * as Output from "../output";
+import { createLogger } from "./statistics";
 
 type Operation = {
   /** The UNIX timestamp for when the operation should be run */
@@ -26,7 +26,7 @@ type Operation = {
 };
 
 /** Logger */
-const logger = Output.createLogger("Scheduler");
+const logger = createLogger("Scheduler");
 
 /** Timeout for when to run through the list of operations */
 let timeout: NodeJS.Timeout | null = null;

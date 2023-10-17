@@ -1,8 +1,10 @@
-import * as Output from "../output";
-import * as ProcessManager from "../processes";
+import * as ProcessManager from "./pm2";
+import { createLogger } from "../statistics";
+
+// TODO: add type safety and couple with
 
 /** logger */
-const logger = Output.createLogger("Commands");
+const logger = createLogger("Commands");
 
 /**
  * Sends a command to the running command handler process running in PM2

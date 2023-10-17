@@ -1,19 +1,27 @@
-import * as Certificates from "../certificates";
-import * as ProcessManager from "../processes/pm2";
-import * as State from "../state";
+import * as Certificates from "./certificates";
+import * as ProcessManager from "./processes/pm2";
+import * as State from "./state";
+import { createLogger } from "./statistics";
+
+/** Logger */
+const logger = createLogger("Server Manager");
 
 // This file contains the available commands callable
 // from the CLI program
-// each exported method is imported by program.mjs and
-// executed dynamically on runtime
+// each exported function is executable as a cli command
+// through program.mjs
 
 /** Prints the current status of the server and managed processes */
 export async function status(options: { network: boolean }) {
   const state = await State.updateManagerState();
   const runners = await ProcessManager.list();
   ProcessManager.disconnect();
-  await Certificates.bootstrap();
+  Certificates.bootstrap();
   const certs = Certificates.list();
+
+  logger.error("here", LOG_LEVEL);
+  logger.info("here", LOG_LEVEL);
+  logger.warn("test");
 
   console.log("RUNNING PROCESSES");
   console.log(JSON.stringify(runners, null, 4));
@@ -21,7 +29,7 @@ export async function status(options: { network: boolean }) {
   console.log(JSON.stringify(state.operations, null, 4));
   console.log("NETWORK");
   console.log(JSON.stringify(state.network, null, 4));
-  console.log("CERTIFICATATES");
+  console.log("CERTIFICATES");
   console.log(JSON.stringify(certs, null, 4));
 }
 

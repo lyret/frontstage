@@ -1,9 +1,10 @@
 import * as HTTP from "node:http";
 import * as Path from "node:path";
-import * as Output from "../output";
+import * as Output from "./httpHandlers";
+import { createLogger } from "../statistics";
 
 /** Logger */
-const logger = Output.createLogger("Redirections");
+const logger = createLogger("Redirections");
 
 /** In memory collection of registered internal routes sorted by hostname */
 const redirections = new Map<string, Routes.Redirection>();
@@ -42,5 +43,5 @@ export function handleHTTPRequest(
   const targetHref =
     "https://" + Path.join(redirection.target, targetUrl).replace(/\\/g, "/");
 
-  return Output.Http.Redirected(req, res, targetHref);
+  return Output.Redirected(req, res, targetHref);
 }

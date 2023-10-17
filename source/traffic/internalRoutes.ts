@@ -2,10 +2,11 @@ import * as HTTP from "node:http";
 import * as NET from "node:net";
 import * as URL from "node:url";
 import * as HttpProxy from "http-proxy";
-import * as Output from "../output";
+import * as Output from "./httpHandlers";
+import { createLogger } from "../statistics";
 
 /** Logger */
-const logger = Output.createLogger("Internal Routes");
+const logger = createLogger("Internal Routes");
 
 /** In memory collection of registered internal routes sorted by hostname */
 const internalRoutes = new Map<string, Routes.InternalRoute>();
@@ -86,7 +87,7 @@ export function handleHTTPRequest(
   // Make sure that the proxy is initialised
   if (!proxy) {
     logger.warn(`The http proxy has not been initialised`);
-    return Output.Http.NotFound(req, res);
+    return Output.NotFound(req, res);
   }
 
   // Host headers are passed through from the source by default
@@ -115,7 +116,7 @@ export function handleHTTPRequest(
         `Failed to forward request from ${req.headers.host} to ${target.hostname}`,
         err
       );
-      return Output.Http.NotFound(req, res);
+      return Output.NotFound(req, res);
     }
   );
 }
@@ -138,7 +139,7 @@ export function handleWebsocketUpgrade(
   // Make sure that the proxy is initialised
   if (!proxy) {
     logger.warn(`The http proxy has not been initialised`);
-    return Output.Http.NotFound(req, socket);
+    return Output.NotFound(req, socket);
   }
 
   // Log any future websocket errors
@@ -168,7 +169,7 @@ export function handleWebsocketUpgrade(
           `Failed to upgrade websockets from ${req.headers.host} to ${targetUrl}`,
           err
         );
-        return Output.Http.NotFound(req, res);
+        return Output.NotFound(req, res);
       }
     );
   } catch (err) {
@@ -176,7 +177,7 @@ export function handleWebsocketUpgrade(
       `Failed to upgrade websockets from ${req.headers.host} to ${targetUrl}`,
       err
     );
-    return Output.Http.BadRequest(req, socket);
+    return Output.BadRequest(req, socket);
   }
 }
 
@@ -208,7 +209,7 @@ export function bootstrap() {
     logger.error("Routing error", { error: error, target: target });
 
     if (res.write) {
-      return Output.Http.NotFound(req, res as HTTP.ServerResponse);
+      return Output.NotFound(req, res as HTTP.ServerResponse);
     }
   });
 

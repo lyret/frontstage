@@ -1,13 +1,13 @@
 import * as Path from "node:path";
 import * as FSE from "fs-extra";
-import * as Output from "../output";
+import { createLogger } from "../statistics";
 import { generateSelfSignedCertificate } from "./_generateSelfSignedCertificate";
 import { requestCertificateFromLetsEncrypt } from "./letsEncrypt";
 import { createCertificate } from "./_createCertificate";
 import { normalizeName, defaultRenewalMethod } from "./_utilities";
 
 /** Logger */
-const logger = Output.createLogger("Certificates");
+const logger = createLogger("Certificates");
 
 /** In-memory collection of loaded certificates */
 const loadedCertificates = new Map<string, Certificates.Certificate>();
