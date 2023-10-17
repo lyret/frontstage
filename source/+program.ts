@@ -1,6 +1,6 @@
-import * as Certificates from "./certificates";
-import * as ProcessManager from "./processes/pm2";
-import * as State from "./state";
+import * as Certificates from "../certificates";
+import * as ProcessManager from "../processes/pm2";
+import * as State from "../state";
 
 // This file contains the available commands callable
 // from the CLI program
@@ -29,6 +29,7 @@ export async function status(options: { network: boolean }) {
 export async function reload() {
   // TODO: testcode
   console.log("reload");
+  ProcessManager.bootstrap();
 }
 
 /** Checks if the current app config file is valid */
@@ -116,59 +117,3 @@ export async function main() {
   // }
   // }
 }
-
-// FIXME: old INDEX.TS
-
-// import {
-//   generateProcessEcosystem,
-//   reloadPM2,
-//   removeAppProcessesFromPM2,
-// } from "./processes/ecosystem";
-// import { startRedirectionProxy } from "./routing/redirection-proxy";
-// import { startReverseRouterServer } from "./routing/reverse-proxy";
-//
-
-// TODO: Move to program?
-// // Create a PM2 process for the server manager and then exit
-// export async function bootstrap() {
-//   await PM2.bootstrap();
-//   console.log("done!");
-// }
-// // Determine the runtime mode on execution
-// //const isTest: boolean = process.argv[2] === "test";
-//
-// // Determine if the application should deamonize and exit
-// //const isDeamon: boolean = process.argv[2] === "deamon";
-
-// TODO: Move to daemon?
-// export async function main() {
-//   process.on("message", (...a) => {
-//     console.log("HERE HERE HERE", ...a);
-//     console.log(process.env);
-//     console.log(process.env.LOG_LEVEL);
-//     console.log(typeof REVERSE_ROUTER_HOST, REVERSE_ROUTER_HOST);
-//     console.log(typeof LOG_LEVEL, LOG_LEVEL);
-//
-//     process.send!({
-//       type: "process:msg",
-//       data: {
-//         success: true,
-//       },
-//     });
-//   });
-//
-//   console.log("waiting for signal...");
-//   // setInterval(() => {
-//   //   console.log("i");
-//   // }, 1000);
-//
-//   //   // Only output the intepretetion of the current apps.yaml and then exit
-//   //   else if (isTest) {
-//   //     update();
-//   //   }
-//   //   // Default: Watch the apps.yaml for changes and manage processes and routing
-//   //   else {
-//   //     update().then(() => watchAppConfig(update));
-//   //   }
-// }
-//

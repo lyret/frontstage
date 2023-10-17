@@ -148,7 +148,7 @@ export function validateAppConfig(
     console.error("");
 
     // Raise the problem
-    throw new Error("The apps.yaml file is invalid");
+    throw new Error("The app configuration file is invalid");
   }
 
   return config;

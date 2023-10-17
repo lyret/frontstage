@@ -3,7 +3,7 @@ import * as Validate from "./_validateAppConfig";
 import * as Parse from "./_parseStateFromConfig";
 import * as Cache from "./_cacheState";
 import * as Operations from "./_findOperations";
-import * as Network from "../network";
+import * as Network from "./_updateNetworkState";
 
 /**
  * Reads the current configuration file, validates it and parses what

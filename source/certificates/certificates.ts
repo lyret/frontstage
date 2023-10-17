@@ -2,7 +2,7 @@ import * as Path from "node:path";
 import * as FSE from "fs-extra";
 import * as Output from "../output";
 import { generateSelfSignedCertificate } from "./_generateSelfSignedCertificate";
-import { requestCertificateFromLetsEncrypt } from "./_requestEncryptCertificates";
+import { requestCertificateFromLetsEncrypt } from "./letsEncrypt";
 import { createCertificate } from "./_createCertificate";
 import { normalizeName, defaultRenewalMethod } from "./_utilities";
 

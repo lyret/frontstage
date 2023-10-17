@@ -60,11 +60,15 @@ async function importAndRun(methodName, ...methodArguments) {
   // Rebuild the source code if the build option was given
   const { build } = program.opts();
   if (build) {
-    await createNewBuild();
+    await createNewBuilds();
   }
 
   // Import and run the given method name
-  const latestBuild = Path.resolve(process.env["BIN_DIRECTORY"], "index.js");
+  const latestBuild = Path.resolve(
+    process.env["BIN_DIRECTORY"],
+    "commands",
+    "+program.js"
+  );
   try {
     const module = await import(latestBuild);
     try {
@@ -82,11 +86,20 @@ async function importAndRun(methodName, ...methodArguments) {
 /**
  * Creates a new build in the binary directory
  */
-async function createNewBuild() {
+async function createNewBuilds() {
+  // Entry points to build
+  const entryPoints = [
+    ["commands", "program"],
+    ["commands", "scheduler"],
+    ["routes", "publicServer"],
+  ].map(([folder, fileName]) =>
+    Path.resolve(installationPath, "source", folder, `+${fileName}.ts`)
+  );
+
   const buildOptions = {
     platform: "node",
     packages: "external",
-    entryPoints: [Path.resolve(installationPath, "source", "index.ts")],
+    entryPoints,
     bundle: true,
     define: env,
     outdir: Path.resolve(process.env["BIN_DIRECTORY"]),
@@ -175,7 +188,7 @@ program
   .command("build")
   .description("Create a new build from the source files")
   .action(async () => {
-    await createNewBuild();
+    await createNewBuilds();
   });
 
 // PROGRAM EXECUTION ---------------

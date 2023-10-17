@@ -1,9 +1,6 @@
 import * as HTTP from "node:http";
 import * as AcmeClient from "acme-client";
-import { BadRequest, NotFound, Ok } from "../network/httpHandlers";
 import * as Output from "../output";
-
-// TODO: Its not clear how this is used, needs a server?
 
 /** Runtime cache of outstanding challenges to Lets Encrypt */
 const outstandingChallenges = new Map<string, string>();
@@ -11,13 +8,18 @@ const outstandingChallenges = new Map<string, string>();
 /** Logger */
 const logger = Output.createLogger("Lets Encrypt");
 
-// TODO: Document
+/**
+ * Sends a request to a Lets Encrypt directory (i.e. either production or staging)
+ * to create and return a certificate for the given hostname.
+ * After the request has been made a challenge will be made from Lets Encrypt to
+ * this server that is handled by the public server, make sure its running.
+ */
 export async function requestCertificateFromLetsEncrypt(
   hostname: string
 ): Promise<[certificate: string, privateKey: string]> {
   let token = "";
 
-  // Make sure that self-signed certificates are enabled and that the necessary information is set
+  // Make sure that certificates from Lets Encrypt are enabled and that the necessary information is set
   if (!LETS_ENCRYPT_CERTIFICATES_ENABLED) {
     logger.error("Not enabled, can't request certificate");
     throw new Error("Lets encrypt certificates are not enabled");
@@ -121,15 +123,31 @@ export async function requestCertificateFromLetsEncrypt(
   }
 }
 
-/** Resolves a http challenge response from the Lets Encrypt servers */
+/**
+ * Evaluates if the given request matches the one that Lets Encrypt will try to contact this server on
+ * Is used from the public server
+ */
+export function isLetsEncryptChallengeRequest(
+  req: HTTP.IncomingMessage
+): boolean {
+  if (!LETS_ENCRYPT_CERTIFICATES_ENABLED) {
+    return false;
+  }
+  return /^\/.well-known\/acme-challenge\//.test(req.url || "/");
+}
+
+/**
+ * Resolves a http challenge response from the Lets Encrypt servers
+ * Is used from the public server
+ */
 export function handleLetsEncryptChallengeRequest(
   req: HTTP.IncomingMessage,
   res: HTTP.ServerResponse
 ): void {
   // Make sure that this request actually is meant for this service
-  if (!(req.url && testIfRequestIsChallenge(req))) {
+  if (!(req.url && isLetsEncryptChallengeRequest(req))) {
     logger.warn(`Got a request thats not an ACME-challenge: ${req.url}`);
-    return BadRequest(req, res);
+    return Output.Http.BadRequest(req, res);
   }
 
   // Get the token from the url
@@ -150,13 +168,13 @@ export function handleLetsEncryptChallengeRequest(
   // ...No host information
   if (!req.headers.host) {
     logger.warn("Got a request with not host header set");
-    return NotFound(req, res);
+    return Output.Http.NotFound(req, res);
   }
 
   // No token in request
   if (!token) {
     logger.warn("Got a request without an included token");
-    return NotFound(req, res);
+    return Output.Http.NotFound(req, res);
   }
 
   const key = outstandingChallenges.get(
@@ -167,19 +185,14 @@ export function handleLetsEncryptChallengeRequest(
   // No outstanding challenge
   if (!key) {
     logger.trace(`No outstanding challenge found for token: ${token}`);
-    return NotFound(req, res);
+    return Output.Http.NotFound(req, res);
   }
 
   // Respond with the key corresponding to the token from the outstanding challenges
-  return Ok(req, res, key);
+  return Output.Http.Ok(req, res, key);
 }
 
 /** Helper function to turn a hostname and token into a string used to index the challenges collection */
 function normalizeIndex(hostname: string, token: string): string {
   return `${hostname}_${token.replace(/\W-/g, "")}`;
-}
-
-/** Evaluates if the given request matches the one that Lets Encrypt will try to contact this server on */
-function testIfRequestIsChallenge(req: HTTP.IncomingMessage): boolean {
-  return /^\/.well-known\/acme-challenge\//.test(req.url || "/");
 }

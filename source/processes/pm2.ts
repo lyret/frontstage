@@ -1,5 +1,9 @@
 import * as Path from "node:path";
 import * as PM2 from "pm2";
+import * as Output from "../output";
+
+/** Logger */
+const logger = Output.createLogger("Processes");
 
 /**
  * Get an array of all processes managed by PM2
@@ -68,8 +72,8 @@ export async function remove(label: string) {
       } else {
         // Wait 1 and then dump the current list of processes
         // then resolve
-        setTimeout(() => {
-          dump();
+        setTimeout(async () => {
+          await dump();
           resolve();
         }, 1000);
       }
@@ -114,42 +118,61 @@ async function hardrestart(
   return start(label, options);
 }
 
-// TODO: re-add?
-// async function send({ pm_id }: PM2.Proc, topic: string, data: object = {}) {
-//   return new Promise<void>((resolve, reject) => {
-//     if (typeof pm_id === "undefined") {
-//       reject(new Error("Process is missing field 'pm_id'"));
-//       return;
-//     }
-//     PM2.sendDataToProcessId(
-//       pm_id,
-//       {
-//         id: pm_id,
-//         data,
-//         topic,
-//       },
-//       (err) => {
-//         if (err) {
-//           reject(err);
-//         } else {
-//           // Listen to messages from application
-//           PM2.launchBus((err, pm2_bus) => {
-//             if (err) {
-//               // TODO: needed here? PM2.disconnect();
-//               reject(err);
-//             } else {
-//               pm2_bus.on("process:msg", (packet: any) => {
-//                 console.log({ packet });
-//                 pm2_bus.close();
-//                 resolve();
-//               });
-//             }
-//           });
-//         }
-//       }
-//     );
-//   });
-// }
+/**
+ * Opens a message bus to a process in PM2
+ * and sends a message with the given topic and data.
+ * returns true if successful
+ * @param waitForResponse waits a response with status 200 before resolving
+ */
+export async function sendMessage(
+  proc: Process.Status,
+  topic: string,
+  data: object = {},
+  waitForResponse: boolean = false
+) {
+  return new Promise<boolean>((resolve, reject) => {
+    PM2.sendDataToProcessId(
+      proc.index,
+      {
+        id: proc.index,
+        data,
+        topic,
+      },
+      (err) => {
+        if (err) {
+          reject(err);
+        } else {
+          // Possibly listen to a response message from the process
+          // should contain the data { status: 200 } to indicate success
+          if (waitForResponse) {
+            PM2.launchBus((err, pm2_bus) => {
+              if (err) {
+                reject(err);
+              } else {
+                pm2_bus.on(
+                  "process:msg",
+                  (packet: { data?: { status: any } }) => {
+                    pm2_bus.close();
+                    disconnect();
+
+                    if (packet.data?.status && packet.data?.status == 200) {
+                      resolve(true);
+                    } else {
+                      resolve(false);
+                    }
+                  }
+                );
+              }
+            });
+          } else {
+            resolve(true);
+            disconnect();
+          }
+        }
+      }
+    );
+  });
+}
 
 /**
  * Starts the manager as a background process in PM2,
@@ -162,11 +185,20 @@ export async function bootstrap(): Promise<Process.Status> {
   await connect();
 
   // Start or restart the PM2 process of the server manager daemon
-  return hardrestart(PROCESS_MANAGER_LABEL, {
+  const proc = await hardrestart(PROCESS_MANAGER_LABEL, {
     script: Path.resolve(SOURCE_DIRECTORY, PROCESS_MANAGER_SCRIPT),
     cwd: SOURCE_DIRECTORY,
     namespace: "lol3",
   } as any);
+  console.log(
+    await sendMessage(
+      proc,
+      "operation",
+      { timestamp: Date.now() + 10000 },
+      true
+    )
+  );
+  return proc;
 }
 
 /**
@@ -177,7 +209,7 @@ export async function connect() {
   return new Promise<void>((resolve, reject) => {
     PM2.connect((err) => {
       if (err) {
-        reject();
+        reject(err);
       } else {
         resolve();
       }
@@ -198,10 +230,14 @@ export async function disconnect() {
  * that the same processes will be restored on restart
  */
 export async function dump() {
-  return new Promise<void>((resolve, reject) => {
+  return new Promise<void>((resolve) => {
     PM2.dump((err) => {
       if (err) {
-        reject();
+        logger.error(
+          "Couldn't save process list in PM2 while removing a processes",
+          err
+        );
+        resolve();
       } else {
         resolve();
       }
@@ -232,7 +268,7 @@ function transform(proc: PM2.ProcessDescription | undefined): Process.Status {
       unstable_restarts: p.pm2_env.unstable_restarts,
       uptime: p.pm2_env.pm_uptime,
       createdAt: p.pm2_env.created_at,
-      status: p.pm2_env.status,
+      running: p.pm2_env.status == "online",
       memory: p.monit.memory,
       cpu: p.monit.cpu,
     },

@@ -1,4 +1,4 @@
-import * as Checks from "./networkChecks";
+import * as Checks from "./_networkChecks";
 
 /**
  * Updates and returns the the current network status of the manager
