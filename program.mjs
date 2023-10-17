@@ -77,7 +77,8 @@ async function importAndRun(methodName, ...methodArguments) {
       process.exit(1);
     }
   } catch (err) {
-    console.error("Failed to load the latest build");
+    console.error(err);
+    console.error("\nFailed to load the latest build");
   }
 }
 

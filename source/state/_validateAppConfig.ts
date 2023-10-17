@@ -1,105 +1,112 @@
-import * as Ajv from "ajv";
-import * as AjvFormats from "ajv-formats";
 import * as Yaml from "yaml";
+import { z } from "zod";
 
-// Validation schemas for Application properties
+/** Extended validation methods */
+const ze = {
+  /** Matches a yaml string of the given schema */
+  yaml: <T extends z.ZodTypeAny | z.TransformEffect<any>>(schema: T) =>
+    z
+      .string()
+      .transform<z.ZodTypeAny>((val, ctx) => {
+        try {
+          return Yaml.parse(val);
+        } catch (err: any) {
+          ctx.addIssue({
+            path: [],
+            message: `${err.message}`,
+            code: z.ZodIssueCode.custom,
+            params:
+              err.linePos && err.linePos.length
+                ? {
+                    line: err.linePos[0].line,
+                    col: err.linePos[0].col,
+                  }
+                : undefined,
+          });
+          return z.NEVER;
+        }
+      })
+      .pipe(schema as any),
+  /** Matches a hostname or a wildcard hostname */
+  hostname: () =>
+    z
+      .string()
+      .regex(
+        /^(?:([a-zA-Z0-9-]+|\*)\.)?([a-zA-Z0-9-]{1,61})\.([a-zA-Z0-9]{2,7})$/,
+        "Must be a valid hostname"
+      ),
+  /** Matches an array of only unique values  */
+  uniqueArray: <T extends z.ZodTypeAny, A extends z.ZodArray<T, any>>(
+    array: A
+  ) =>
+    array.superRefine((items, ctx) => {
+      if (new Set(items).size === items.length) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Each entry in the set must be an unique value",
+        });
+      }
+      return z.NEVER;
+    }),
+};
+
 // TODO: Use ZOD instead
 
-const label: Ajv.JSONSchemaType<string> = { type: "string", pattern: "[^s-]" };
-const redirect: Ajv.JSONSchemaType<string> = { type: "string" };
-const certificates: Ajv.JSONSchemaType<string> = {
-  type: "string",
-  isCertificate: true,
-};
-const serve: Ajv.JSONSchemaType<string> = { type: "string", nullable: true };
-const port: Ajv.JSONSchemaType<number> = { type: "integer" };
-const hostname: Ajv.JSONSchemaType<string> = {
-  type: "string",
-  format: "hostname",
-  nullable: true,
-};
-const hostnames: Ajv.JSONSchemaType<Array<string>> = {
-  type: "array",
-  items: hostname,
-  minItems: 1,
-  uniqueItems: true,
-};
+/**Validation schema for configuring an application process */
+const process = z
+  .object({
+    script: z.string(),
+    cwd: z.string().nullable(),
+    intepreter: z.string().nullable(),
+    args: z.string().nullable(),
+    env: z.record(z.union([z.string(), z.number()])).nullable(),
+  })
+  .strict();
 
-/** Validation schema for configuring an application process */
-const process: Ajv.JSONSchemaType<Configuration.Application["process"]> & any =
-  {
-    type: "object",
-    properties: {
-      script: { type: "string" },
-      cwd: { type: "string", nullable: true },
-      intepreter: { type: "string", nullable: true },
-      args: { type: "string", nullable: true },
-      env: {
-        type: "object",
-        additionalProperties: {
-          anyOf: [{ type: "string" }, { type: "number" }],
-        },
-        nullable: true,
-      },
-    },
-    required: ["script"],
-    additionalProperties: false,
-  };
-
-/** Validation schema for a individual application */
-const application: Ajv.JSONSchemaType<Configuration.Application> & any = {
-  type: "object",
-  properties: {
-    label,
-    process,
-    serve,
-    port,
-    redirect,
-    certificates,
-    hostname,
-    hostnames,
-  },
-  anyOf: [
-    // to Redirect
-    {
-      required: ["redirect"],
-      anyOf: [{ required: ["hostname"] }, { required: ["hostnames"] }],
-    },
-    // to Static File Serve
-    {
-      required: ["serve"],
-      anyOf: [{ required: ["hostname"] }, { required: ["hostnames"] }],
-    },
-    // to Port
-    {
-      required: ["port"],
-      anyOf: [{ required: ["hostname"] }, { required: ["hostnames"] }],
-    },
-    // No hostname
-    {
-      anyOf: [
-        {
-          required: ["process"],
-        },
-        {
-          required: [],
-        },
-      ],
-    },
-  ],
-  required: ["label"],
-  additionalProperties: false,
-};
+/* Validation schema for a individual application configuration */
+const application = z
+  .object({
+    label: z.string().regex(/[a-z\/]*/),
+    process: process.nullable(),
+    certificates: z
+      .literal("lets-encrypt")
+      .or(z.literal("self-signed"))
+      .or(z.literal("default"))
+      .default("default"),
+  })
+  .and(
+    z.union([
+      /* Application with redirection */
+      z.object({
+        redirect: z.string(),
+      }),
+      /* Application with static server */
+      z.object({
+        serve: z.string().nullable(),
+      }),
+      /* Application with a targeted port */
+      z.object({
+        port: z.number().int(),
+      }),
+    ])
+  )
+  .and(
+    z.union([
+      /* Application with single hostname */
+      z.object({
+        hostname: ze.hostname(),
+      }),
+      /* Application with several hostnames */
+      z.object({
+        hostnames: ze.uniqueArray(z.array(ze.hostname())),
+      }),
+    ])
+  );
 
 /** Validation schema for the application configuration file */
-const applicationConfiguration: Ajv.JSONSchemaType<
-  Array<Configuration.Application>
-> = {
-  type: "array",
-  items: application,
-  minItems: 0,
-  uniqueItems: true,
-};
+const applicationConfiguration = ze.yaml(
+  ze.uniqueArray(z.array(application).nonempty())
+);
 
 /**
  * Validates the given text contents for a valid YAML configuration
@@ -108,43 +115,19 @@ const applicationConfiguration: Ajv.JSONSchemaType<
 export function validateAppConfig(
   contents: string
 ): Array<Configuration.Application> {
-  const ajv = new Ajv.default();
-  AjvFormats.default(ajv);
-
-  // AJV Custom validators
-  const availableCertificateTypes = ["lets-encrypt", "self-signed"];
-  ajv.addKeyword({
-    keyword: "isCertificate",
-    type: "string",
-    error: {
-      message: `Must be an available way to retrive a certificate: "${availableCertificateTypes.join(
-        `", "`
-      )}",`,
-    },
-    validate: (_: any, data: string) => {
-      return availableCertificateTypes.includes(data);
-    },
-  });
-
-  const validator = ajv.compile(applicationConfiguration);
-  const config = Yaml.parse(contents);
-  const isValid = validator(config);
+  const results = applicationConfiguration.safeParse(contents);
 
   // Output any problems with the apps.yaml file and raise and error
-  if (!isValid) {
+  if (!results.success) {
     // Output
     console.error(`  There are errors in the configuration file:`);
     console.error(`  Fix the following errors:\n`);
-    const errors = validator!.errors!;
+    const errors = results.error.format()._errors;
 
-    for (let i = errors.length - 1; i >= 0; i--) {
-      const err = errors[i];
-      const index = err.instancePath.split("/")[1];
-      const entry = config[index];
-      const prefix = `${entry && entry.label ? entry.label : ""}${
-        err.instancePath
-      }`;
-      console.error(`${prefix}: ${err.message}`);
+    console.error(JSON.stringify(results.error.flatten(), null, 2));
+
+    for (const error of errors) {
+      console.error(`    `, error);
     }
     console.error("");
 
@@ -152,5 +135,5 @@ export function validateAppConfig(
     throw new Error("The app configuration file is invalid");
   }
 
-  return config;
+  return results.data as any;
 }
