@@ -29,6 +29,12 @@
 
 - [ ] Add runnable FTP server access
 
+- [ ] General documentation
+
+### Avgränsningar:
+
+- [ ] Setting the log level using the CLI requires rebuilding
+
 # server-test.ts
 
 import \* as HTTP from 'node:http';

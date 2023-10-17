@@ -9,7 +9,7 @@ import * as Path from "node:path";
 export function cacheManagerState(
   nextState: Manager.ApplicationsState
 ): Manager.ApplicationsState {
-  const pathToCachedState = Path.resolve(BIN_STATE_FILE);
+  const pathToCachedState = Path.resolve(CACHE_DIRECTORY, "state.json");
 
   // Retrieve the previous state
   let prevState: Manager.ApplicationsState = {

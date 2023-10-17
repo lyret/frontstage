@@ -75,7 +75,7 @@ declare global {
   var APPS_CONFIG_FILE: string;
   var BIN_DIRECTORY: string;
   var CERTIFICATES_DIRECTORY: string;
-  var BIN_STATE_FILE: string;
+  var CACHE_DIRECTORY: string;
 
   // CONSTANTS
 

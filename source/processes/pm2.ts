@@ -2,9 +2,6 @@ import * as Path from "node:path";
 import * as PM2 from "pm2";
 import { createLogger } from "../statistics";
 
-// NOTE: the processes folder should contain more responsibility and be less coupled
-// with pm2
-
 /** Logger */
 const logger = createLogger("Processes");
 
