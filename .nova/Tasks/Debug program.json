@@ -1,0 +1,24 @@
+{
+  "actions" : {
+    "build" : {
+      "postActions" : [
+        {
+          "script" : "npx manager build",
+          "type" : "runScript"
+        }
+      ]
+    }
+  },
+  "buildBeforeRunning" : true,
+  "extension" : {
+    "identifier" : "panic.JavaScript",
+    "name" : "JavaScript"
+  },
+  "extensionTemplate" : "nodeDebug",
+  "extensionValues" : {
+    "launchArgs" : [
+      "reload"
+    ],
+    "scriptPath" : "program.mjs"
+  }
+}

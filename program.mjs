@@ -101,6 +101,7 @@ async function createNewBuilds() {
     packages: "external",
     entryPoints,
     bundle: true,
+    sourcemap: true, // TODO: only needed when developing
     define: env,
     outdir: Path.resolve(process.env["BIN_DIRECTORY"]),
   };
