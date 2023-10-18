@@ -13,7 +13,28 @@ const logger = createLogger("Server Manager");
 
 /** Prints the current status of the server and managed processes */
 export async function status(options: { network: boolean }) {
-  logger.info("Status?");
+  const runners = await ProcessManager.list();
+
+  const table = runners.reduce<{
+    [key: string | number]: Partial<object>;
+  }>((tabularData, process) => {
+    tabularData[process.index] = {
+      LABEL: process.label,
+      PID: process.pid,
+
+      RESTARTS: process.details?.restarts || "?",
+      MEM: process.details
+        ? Math.round(process.details.memory / 1000000) + "mb"
+        : "?",
+      CPU: process.details ? process.details.cpu + "%" : "?",
+      UPTIME: process.details
+        ? Math.round(process.details.uptime / 10000000 / 60 / 60 / 60) + "h"
+        : "?",
+    };
+    return tabularData;
+  }, {});
+
+  console.table(table);
   return;
 }
 
