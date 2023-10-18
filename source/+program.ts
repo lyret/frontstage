@@ -22,7 +22,6 @@ export async function reload() {
   // FIXME: CONTINUE HERe this is where im currently working
   const state = await State.updateManagerState();
   const runners = await ProcessManager.list();
-  ProcessManager.disconnect();
   Certificates.bootstrap();
   const certs = Certificates.list();
 
@@ -34,6 +33,7 @@ export async function reload() {
   console.log(JSON.stringify(state.network, null, 4));
   console.log("CERTIFICATES");
   console.log(JSON.stringify(certs, null, 4));
+
   //ProcessManager.bootstrap();
   // TODO: new experiments
   //   for (const { port } of operations.uniquePorts) {

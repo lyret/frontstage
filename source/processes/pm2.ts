@@ -16,6 +16,7 @@ export async function list() {
       } else {
         resolve(list.map((proc) => transform(proc)));
       }
+      disconnect();
     });
   });
 }
@@ -33,13 +34,19 @@ export async function find(label: string): Promise<Process.Status | undefined> {
  * Restart the process with the given label, if found
  */
 export async function restart(label: string) {
+  await connect();
   return new Promise<Process.Status>((resolve, reject) => {
-    PM2.restart(label, (err, proc: any) => {
+    PM2.restart(label, (err) => {
       if (err) {
         reject(err);
       } else {
         // Wait 1 and then resolve
-        setTimeout(() => resolve(transform(proc[0])), 1000);
+        setTimeout(() => {
+          find(label).then((proc) => {
+            resolve(proc!);
+            disconnect();
+          });
+        });
       }
     });
   });
@@ -49,13 +56,19 @@ export async function restart(label: string) {
  * Stops the process with the given label, if found
  */
 export async function stop(label: string) {
+  await connect();
   return new Promise<Process.Status>((resolve, reject) => {
-    PM2.stop(label, (err, proc: any) => {
+    PM2.stop(label, (err) => {
       if (err) {
         reject(err);
       } else {
         // Wait 1 and then resolve
-        setTimeout(() => resolve(transform(proc[0])), 1000);
+        setTimeout(() => {
+          find(label).then((proc) => {
+            resolve(proc!);
+            disconnect();
+          });
+        }, 1000);
       }
     });
   });
@@ -65,15 +78,14 @@ export async function stop(label: string) {
  * If found deletes the process with the given label completely from pm2
  */
 export async function remove(label: string) {
+  await connect();
   return new Promise<void>((resolve, reject) => {
     PM2.delete(label, (err) => {
       if (err) {
         reject(err);
       } else {
-        // Wait 1 and then dump the current list of processes
-        // then resolve
+        // Wait 1 and then resolve
         setTimeout(async () => {
-          await dump();
           resolve();
         }, 1000);
       }
@@ -82,20 +94,23 @@ export async function remove(label: string) {
 }
 
 /**
- * Start a new process with the given options
+ * Start a new process with the given options, will restart the process
+ * if it already exists
  */
-async function start(label: string, options: Process.Options) {
+export async function start(label: string, options: Process.Options) {
+  await connect();
   return new Promise<Process.Status>((resolve, reject) => {
     PM2.start({ name: label, ...options }, (err) => {
       if (err) {
         reject(err);
       } else {
-        // Wait 1 for the process to start and then dump the current pm2 process list
-        // so that its maintained on restart
-        // Finally find the running process and resolve this operation.
+        // Wait 1 for the process to start
+        // to find the running process list
         setTimeout(() => {
-          dump();
-          find(label).then((proc) => resolve(proc!));
+          find(label).then((proc) => {
+            resolve(proc!);
+            disconnect();
+          });
         }, 1000);
       }
     });
@@ -106,6 +121,7 @@ async function start(label: string, options: Process.Options) {
  * Makes a hard restart of the given process if found, that is first delete it and then
  * re-add it with the given options - this allows environmental variables and execution
  * instructions to be changed
+ * NOTE: seems like start does this already, is hardrestart needed? Test with env options on dummy
  */
 async function hardrestart(
   label: string,
@@ -230,17 +246,16 @@ export async function disconnect() {
  * that the same processes will be restored on restart
  */
 export async function dump() {
+  await connect();
   return new Promise<void>((resolve) => {
     PM2.dump((err) => {
       if (err) {
-        logger.error(
-          "Couldn't save process list in PM2 while removing a processes",
-          err
-        );
+        logger.error("Couldn't save process list in PM2", err);
         resolve();
       } else {
         resolve();
       }
+      disconnect();
     });
   });
 }
