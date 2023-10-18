@@ -29,19 +29,21 @@ const ze = {
       .pipe(schema as any),
   /** Matches a hostname or a wildcard hostname */
   hostname: () =>
-    z
-      .string()
-      .regex(
-        /^(?:([a-zA-Z0-9-]+|\*)\.)?([a-zA-Z0-9-]{1,61})\.([a-zA-Z0-9]{2,7})$/,
-        "Must be a valid hostname"
-      ),
-  /** Matches an array of only unique values  */
-  uniqueArray: <T extends z.ZodTypeAny, Array extends z.ZodArray<T, any>>(
-    array: Array
-  ) => array,
-};
+    z.string().refine((domain) => {
+      // Allow wildcard domains
+      domain = domain.replace(/^\*\.*/, "");
 
-// TODO: Use ZOD instead
+      // Split by dot and check each part
+      let parts = domain.split(".");
+      for (let part of parts) {
+        if (!/^([a-zA-Z0-9åäö-]+)$/.test(part)) {
+          return false;
+        }
+      }
+
+      return true;
+    }, "Must be a valid hostname"),
+};
 
 /**Validation schema for configuring an application process */
 const process = z
@@ -55,7 +57,8 @@ const process = z
       .nullable()
       .optional(),
   })
-  .strict();
+  .strict()
+  .transform((process) => process as Configuration.Application["process"]);
 
 /* Validation schema for a individual application configuration */
 const applicationSchema = z
@@ -71,9 +74,11 @@ const applicationSchema = z
     serve: z.string().nullable().optional(),
     port: z.number().int().nullable().optional(),
     hostname: ze.hostname().optional(),
-    hostnames: ze.uniqueArray(z.array(ze.hostname())).optional(),
+    hostnames: z.array(ze.hostname()).optional(),
   })
   .superRefine((app, ctx) => {
+    // Validate that not both 'hostname' and 'hostnames' are given
+    // as options at the same time
     if (app.hostnames && app.hostnames.length) {
       if (app.hostname) {
         ctx.addIssue({
@@ -104,109 +109,103 @@ const applicationSchema = z
           "An application can be configured with either one of the 'serve', 'port' or 'redirect' options",
       });
     }
-  });
-// .and(
-//   z.union([
-//     /* Application with redirection */
-//     z.object({}),
-//     /* Application with static server */
-//     z.object({}),
-//     /* Application with a targeted port */
-//     z.object({}),
-//   ])
-// )
-// .and(
-//   z.union([
-//     /* Application with single hostname */
-//     z.object({}),
-//     /* Application with several hostnames */
-//     z.object({}),
-//   ])
-// );
-
-type Application = z.infer<typeof applicationSchema>;
+  })
+  .transform((app) => app as Configuration.Application);
 
 /** Validation schema for the application configuration file */
-const applicationConfiguration = ze.yaml(
-  z
-    .array(z.any())
-    .nonempty()
-    .transform((dataArray, ctx) => {
-      return dataArray.map((data, arrayIndex) => {
-        const res = applicationSchema.safeParse(data);
-        if (!res.success) {
-          for (const issue of res.error.issues) {
-            ctx.addIssue({
-              fatal: true,
-              code: z.ZodIssueCode.custom,
-              message: issue.message,
-              path: [
-                arrayIndex,
-                data?.label ? data.label : "?",
-                ...ctx.path,
-                ...issue.path,
-              ],
-            });
+const applicationConfigurationSchema = ze
+  .yaml(
+    z
+      // Pass z.any here to first get the array, this makes
+      // error handling more detailed as the label for the
+      // application that creates the issue can be known
+      .array(z.any())
+      .nonempty()
+      // Make sure that the array contains valid application
+      // configurations, add the apps label to any issue found and
+      // abort
+      .transform((dataArray, ctx) => {
+        return dataArray.map((data, arrayIndex) => {
+          const res = applicationSchema.safeParse(data);
+          if (!res.success) {
+            for (const issue of res.error.issues) {
+              ctx.addIssue({
+                fatal: true,
+                code: z.ZodIssueCode.custom,
+                message: issue.message,
+                path: [
+                  arrayIndex,
+                  data?.label ? data.label : "?",
+                  ...ctx.path,
+                  ...issue.path,
+                ],
+              });
+            }
+            return z.NEVER;
           }
-          return z.NEVER;
-        }
-        return res.data;
-      });
-    })
-    .superRefine((applications, ctx) => {
+          return res.data;
+        });
+      })
+      // Handle overall issues with the application configuration
       // Target each app in the configuration, and search for the conflicting
       // values previously in the list of applications
-      for (let firstIndex = 0; firstIndex < applications.length; firstIndex++) {
-        for (let secondIndex = 0; secondIndex < firstIndex; secondIndex++) {
-          const firstApp = applications[secondIndex];
-          const secondApp = applications[firstIndex];
+      .superRefine((applications, ctx) => {
+        for (
+          let firstIndex = 0;
+          firstIndex < applications.length;
+          firstIndex++
+        ) {
+          for (let secondIndex = 0; secondIndex < firstIndex; secondIndex++) {
+            const firstApp = applications[secondIndex];
+            const secondApp = applications[firstIndex];
 
-          // Find duplicated labels
-          if (firstApp.label == secondApp.label) {
-            ctx.addIssue({
-              path: [firstIndex, firstApp.label],
-              code: z.ZodIssueCode.custom,
-              message: `The label ${firstApp.label} is also used for application at index ${secondIndex}`,
-              params: {
-                label: firstApp.label,
-              },
-            });
-            ctx.addIssue({
-              path: [secondIndex, secondApp.label],
-              code: z.ZodIssueCode.custom,
-              message: `The label ${secondApp.label} is already used for application at index ${firstIndex}`,
-              params: {
-                label: secondApp.label,
-              },
-            });
-          }
+            // Find duplicated labels
+            if (firstApp.label == secondApp.label) {
+              ctx.addIssue({
+                path: [firstIndex, firstApp.label],
+                code: z.ZodIssueCode.custom,
+                message: `The label ${firstApp.label} is also used for application at index ${secondIndex}`,
+                params: {
+                  label: firstApp.label,
+                },
+              });
+              ctx.addIssue({
+                path: [secondIndex, secondApp.label],
+                code: z.ZodIssueCode.custom,
+                message: `The label ${secondApp.label} is already used for application at index ${firstIndex}`,
+                params: {
+                  label: secondApp.label,
+                },
+              });
+            }
 
-          // Find duplicated ports
-          if (firstApp.port && firstApp.port == secondApp.port) {
-            ctx.addIssue({
-              path: [firstIndex, firstApp.label],
-              code: z.ZodIssueCode.custom,
-              message: `The port ${firstApp.port} is also used for the application "${secondApp.label}" at index ${secondIndex}`,
-              params: {
-                label: firstApp.label,
-              },
-            });
-            ctx.addIssue({
-              path: [secondIndex, secondApp.label],
-              code: z.ZodIssueCode.custom,
-              message: `The port ${secondApp.port} is already used for application "${firstApp.label}" at index ${firstIndex}`,
-              params: {
-                label: secondApp.label,
-              },
-            });
+            // Find duplicated ports
+            if (firstApp.port && firstApp.port == secondApp.port) {
+              ctx.addIssue({
+                path: [firstIndex, firstApp.label],
+                code: z.ZodIssueCode.custom,
+                message: `The port ${firstApp.port} is also used for the application "${secondApp.label}" at index ${secondIndex}`,
+                params: {
+                  label: firstApp.label,
+                },
+              });
+              ctx.addIssue({
+                path: [secondIndex, secondApp.label],
+                code: z.ZodIssueCode.custom,
+                message: `The port ${secondApp.port} is already used for application "${firstApp.label}" at index ${firstIndex}`,
+                params: {
+                  label: secondApp.label,
+                },
+              });
+            }
           }
         }
-      }
 
-      // This type is never used, but needs to be returned
-      return z.NEVER;
-    })
-);
+        // This type is never used, but needs to be returned
+        return z.NEVER;
+      })
+  )
+  .transform((config) => config as Array<Configuration.Application>);
 
 /**
  * Validates the given text contents for a valid YAML configuration
@@ -216,17 +215,25 @@ export function validateAppConfig(
   contents: string
 ): Array<Configuration.Application> | void {
   // Parse and validate the configuration
-  const results = applicationConfiguration.safeParse(contents);
+  const results = applicationConfigurationSchema.safeParse(contents);
 
   // Output any problems with the configuration and raise an error
   if (!results.success) {
-    // Output
-    console.error(`  There are errors in the configuration file:`);
-    console.error(`  Fix the following errors:\n`);
-    const issues = results.error.issues;
+    console.error(`There are errors in the configuration file:`);
+    console.error(`Fix the following errors:\n`);
 
+    // Print each issue, transform the path to make it readable
+    const issues = results.error.issues;
     for (const issue of issues) {
-      console.error(`  ${issue.path.join(", ")}: ${issue.message}`);
+      const path = issue.path
+        .map((subpath) => {
+          if (!Number.isNaN(Number(subpath))) {
+            return "row " + subpath;
+          }
+          return subpath;
+        })
+        .join(", ");
+      console.error(`  ${path}: ${issue.message}`);
     }
     console.error("");
 

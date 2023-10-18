@@ -136,9 +136,7 @@ declare global {
         // TODO: Process options does not support args?
         args?: string;
         // TODO: Process options does not support env?
-        env?: {
-          [key: string]: string | number;
-        };
+        env?: Record<string, string | number>;
       };
     };
   }
