@@ -32,6 +32,9 @@ let env = parse({ ...defaultEnvVariables, ...customizedEnvVariables });
 // Add global variables from the imported constants
 env = { ...env, ...constants };
 
+// Generate a build number for when creating new builds
+env["BUILD_NUMBER"] = Date.now();
+
 // Make sure the necessary directories are available for making builds
 // and that they exist
 env["SOURCE_DIRECTORY"] = env["SOURCE_DIRECTORY"] || installationPath;

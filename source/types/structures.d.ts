@@ -86,6 +86,8 @@ declare global {
         label: string;
         process: Required<Process.Options>;
       }>;
+      /** The build number for the server manager source code */
+      buildNumber: number;
       /** List of all applications as configured in the YAML file */
       configuration: Array<Configuration.Application>;
     };

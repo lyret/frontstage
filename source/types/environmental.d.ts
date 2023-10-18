@@ -3,6 +3,12 @@
  */
 declare global {
   // TODO: Document all env variables
+
+  // BUILD INFORMATION
+
+  /** Unique build number generated for each build */
+  var BUILD_NUMBER: number;
+
   // LOGGING
 
   /**

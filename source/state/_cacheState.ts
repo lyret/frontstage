@@ -13,6 +13,7 @@ export function cacheManagerState(
 
   // Retrieve the previous state
   let prevState: Manager.ApplicationsState = {
+    buildNumber: 0,
     configuration: [],
     internalRoutes: [],
     internalProcesses: [],

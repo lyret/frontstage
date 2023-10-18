@@ -9,6 +9,7 @@ export async function parseStateFromAppConfig(
 ): Promise<Manager.ApplicationsState> {
   // Create the resulting next manager state
   const nextState: Manager.ApplicationsState = {
+    buildNumber: BUILD_NUMBER,
     redirects: [],
     internalRoutes: [],
     uniqueLabels: [],
