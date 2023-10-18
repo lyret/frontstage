@@ -5,7 +5,7 @@ import { determineInternalProccessesOperations } from "./_determineInternalProcc
 // TODO: document
 
 function findChangeInApplicationState<
-  Key extends keyof Manager.ApplicationsState
+  Key extends keyof Omit<Manager.ApplicationsState, "buildNumber">
 >(
   key: Key,
   prevState: Manager.ApplicationsState,
@@ -16,9 +16,9 @@ function findChangeInApplicationState<
   moved: Manager.ApplicationsState[Key];
 } {
   // Find modifications on the given key of the application state
-  let { added, removed } = ArrayDifferences.diff(
-    prevState[key as keyof Manager.ApplicationsState],
-    nextState[key as keyof Manager.ApplicationsState],
+  let { added, removed } = ArrayDifferences.diff<any>(
+    prevState[key],
+    nextState[key],
     (a, b) => !JsonDiffPatch.diff(a, b)
   );
 
