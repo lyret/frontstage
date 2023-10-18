@@ -1,5 +1,6 @@
 import * as JsonDiffPatch from "jsondiffpatch";
 import * as ArrayDifferences from "fast-array-diff";
+import { determineInternalProccessesOperations } from "./_determineInternalProccessesOperations";
 
 // TODO: document
 
@@ -45,10 +46,10 @@ function findChangeInApplicationState<
   return { added, removed, moved };
 }
 
-export function findOperationsFromChangeOfState(
+export async function findOperationsFromChangeOfState(
   prevState: Manager.ApplicationsState,
   nextState: Manager.ApplicationsState
-): Manager.Operations {
+): Promise<Manager.Operations> {
   return {
     redirections: findChangeInApplicationState(
       "redirects",
@@ -60,8 +61,7 @@ export function findOperationsFromChangeOfState(
       prevState,
       nextState
     ),
-    internalProcesses: findChangeInApplicationState(
-      "internalProcesses",
+    internalProcesses: await determineInternalProccessesOperations(
       prevState,
       nextState
     ),

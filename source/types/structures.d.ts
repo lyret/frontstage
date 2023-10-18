@@ -29,9 +29,9 @@ declare global {
         moved: ApplicationsState["uniqueHostnames"];
       };
       internalProcesses: {
-        added: ApplicationsState["internalProcesses"];
-        removed: ApplicationsState["internalProcesses"];
-        moved: ApplicationsState["internalProcesses"];
+        start: ApplicationsState["internalProcesses"];
+        restart: ApplicationsState["internalProcesses"];
+        remove: ApplicationsState["internalProcesses"];
       };
       applicationProcesses: {
         added: ApplicationsState["applicationProcesses"];

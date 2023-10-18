@@ -11,5 +11,10 @@ const logger = createLogger("Dummy");
  * Prints to the console repeatedly
  */
 export async function main() {
-  setInterval(() => logger.info("Höhöhöhöö"), 2000);
+  console.log(LOG_LEVEL);
+  logger.info("hahaha");
+  setTimeout(() => main(), 2000);
 }
+
+// ON EXECUTION
+main();
