@@ -11,7 +11,7 @@ declare global {
    */
   namespace Manager {
     /**
-     * Overall current state of the manager
+     * Overarching current state of the manager
      */
     type State = {
       operations: Operations;
@@ -28,10 +28,15 @@ declare global {
         removed: ApplicationsState["uniqueHostnames"];
         moved: ApplicationsState["uniqueHostnames"];
       };
-      processes: {
-        added: ApplicationsState["processes"];
-        removed: ApplicationsState["processes"];
-        moved: ApplicationsState["processes"];
+      internalProcesses: {
+        added: ApplicationsState["internalProcesses"];
+        removed: ApplicationsState["internalProcesses"];
+        moved: ApplicationsState["internalProcesses"];
+      };
+      applicationProcesses: {
+        added: ApplicationsState["applicationProcesses"];
+        removed: ApplicationsState["applicationProcesses"];
+        moved: ApplicationsState["applicationProcesses"];
       };
       internalRoutes: {
         added: ApplicationsState["internalRoutes"];
@@ -71,10 +76,18 @@ declare global {
         label: string;
         port: number;
       }>;
-      /** List of all processes that should be managed by PM2 */
-      processes: Array<{ label: string; process: Required<Process> }>;
+      /** List of all internal server manaker processes that should be managed by PM2 */
+      internalProcesses: Array<{
+        label: string;
+        process: Required<Process.Options>;
+      }>;
+      /** List of all application processes that should be managed by PM2 */
+      applicationProcesses: Array<{
+        label: string;
+        process: Required<Process.Options>;
+      }>;
       /** List of all applications as configured in the YAML file */
-      configuration: Array<App>;
+      configuration: Array<Configuration.Application>;
     };
 
     /**
@@ -232,7 +245,7 @@ declare global {
   }
 
   /**
-   * Type definitions for internal routes
+   * Type definitions for routing http traffic
    */
   namespace Routes {
     /**

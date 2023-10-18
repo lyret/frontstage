@@ -213,7 +213,7 @@ const applicationConfigurationSchema = ze
  */
 export function validateAppConfig(
   contents: string
-): Array<Configuration.Application> | void {
+): Array<Configuration.Application> {
   // Parse and validate the configuration
   const results = applicationConfigurationSchema.safeParse(contents);
 
@@ -241,5 +241,5 @@ export function validateAppConfig(
     throw new Error("The app configuration file is invalid");
   }
 
-  return results.data as any;
+  return results.data;
 }

@@ -14,7 +14,8 @@ export async function parseStateFromAppConfig(
     uniqueLabels: [],
     uniqueHostnames: [],
     uniquePorts: [],
-    processes: [],
+    internalProcesses: [],
+    applicationProcesses: [],
     configuration: applications,
   };
 
@@ -81,10 +82,9 @@ export async function parseStateFromAppConfig(
     // to serve the correct directory
     else if (app.serve) {
       // Determine the directory to serve, relative to the apps directory
-      const directoryToServe =
-        "./" +
-        Path.relative(APPS_DIRECTORY, Path.resolve(APPS_DIRECTORY, app.serve));
-
+      // const directoryToServe =
+      //   "./" +
+      //   Path.relative(APPS_DIRECTORY, Path.resolve(APPS_DIRECTORY, app.serve));
       // allProcesses.push({
       //   label,
       //   process: {
@@ -140,7 +140,7 @@ export async function parseStateFromAppConfig(
         );
 
       // Add to process list
-      nextState.processes.push({
+      nextState.applicationProcesses.push({
         label: app.label,
         process: {
           script,

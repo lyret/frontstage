@@ -8,8 +8,8 @@ import * as Output from "./traffic/httpHandlers";
 import * as Certificates from "./certificates";
 import { createLogger } from "./statistics";
 
-// PUBLIC SERVER
-// This is a subprocess of the server manager, it is build and loaded in the process manager
+// PUBLIC WEB SERVER
+// This is a subprocess of the server manager, it is loaded and runs in the process manager. It handles all incomming traffic to the server
 // FIXME: Its probably in this file that wildcard domains needs to be handled, so that they are routed correctly
 // hostnames should be simplyfied in certificates (from *.asda.se to asda.se and handled here ?)
 

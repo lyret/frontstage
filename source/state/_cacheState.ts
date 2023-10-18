@@ -15,7 +15,8 @@ export function cacheManagerState(
   let prevState: Manager.ApplicationsState = {
     configuration: [],
     internalRoutes: [],
-    processes: [],
+    internalProcesses: [],
+    applicationProcesses: [],
     redirects: [],
     uniqueHostnames: [],
     uniqueLabels: [],
@@ -24,7 +25,11 @@ export function cacheManagerState(
 
   if (FS.existsSync(pathToCachedState)) {
     const contents = FS.readFileSync(pathToCachedState, "utf8");
-    prevState = JSON.parse(contents, JsonDiffPatch.dateReviver);
+    const cachedState = JSON.parse(contents, JsonDiffPatch.dateReviver);
+    prevState = {
+      ...prevState,
+      ...cachedState,
+    };
   }
 
   // Update the cached state on file

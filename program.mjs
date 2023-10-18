@@ -6,6 +6,7 @@
 import * as Esbuild from "esbuild";
 import * as Path from "node:path";
 import * as FSE from "fs-extra";
+import * as FS from "fs/promises";
 import { program } from "commander";
 import { config } from "dotenv";
 import { parse } from "dotenv-parse";
@@ -86,20 +87,19 @@ async function importAndRun(methodName, ...methodArguments) {
  * Creates a new build in the binary directory
  */
 async function createNewBuilds() {
-  // Entry points to build
-  const entryPoints = [
-    "program",
-    "schedulerDaemon",
-    "publicServer",
-    "fileAccessServer",
-  ];
+  // Find entry points to build
+  const entryPoints = await FS.readdir(
+    Path.resolve(installationPath, "source")
+  ).then((dirs) =>
+    dirs
+      .filter((fileName) => fileName[0] == "+")
+      .map((fileName) => Path.resolve(installationPath, "source", fileName))
+  );
 
   const buildOptions = {
     platform: "node",
     packages: "external",
-    entryPoints: entryPoints.map((fileName) =>
-      Path.resolve(installationPath, "source", `+${fileName}.ts`)
-    ),
+    entryPoints,
     bundle: true,
     define: env,
     outdir: Path.resolve(process.env["BIN_DIRECTORY"]),

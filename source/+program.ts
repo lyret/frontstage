@@ -3,25 +3,28 @@ import * as ProcessManager from "./processes/pm2";
 import * as State from "./state";
 import { createLogger } from "./statistics";
 
+// PROGRAM
+// This file contains the available commands callable
+// from the CLI program. It is only loaded and run per command
+// executed by the user
+
 /** Logger */
 const logger = createLogger("Server Manager");
 
-// This file contains the available commands callable
-// from the CLI program
-// each exported function is executable as a cli command
-// through program.mjs
-
 /** Prints the current status of the server and managed processes */
 export async function status(options: { network: boolean }) {
+  logger.info("Status?");
+  return;
+}
+
+/** Reconfigures the manager with modifications to the app config file */
+export async function reload() {
+  // FIXME: CONTINUE HERe this is where im currently working
   const state = await State.updateManagerState();
   const runners = await ProcessManager.list();
   ProcessManager.disconnect();
   Certificates.bootstrap();
   const certs = Certificates.list();
-
-  logger.error("here", LOG_LEVEL);
-  logger.info("here", LOG_LEVEL);
-  logger.warn("test");
 
   console.log("RUNNING PROCESSES");
   console.log(JSON.stringify(runners, null, 4));
@@ -31,35 +34,7 @@ export async function status(options: { network: boolean }) {
   console.log(JSON.stringify(state.network, null, 4));
   console.log("CERTIFICATES");
   console.log(JSON.stringify(certs, null, 4));
-}
-
-/** Reconfigures the manager with modifications to the app config file */
-export async function reload() {
-  // TODO: testcode
-  console.log("reload");
-  ProcessManager.bootstrap();
-}
-
-/** Checks if the current app config file is valid */
-export async function validate(options: { network: boolean }) {
-  console.log("validate");
-}
-
-/** Look up good to know information */
-export async function lookup(options: {
-  domain: string | undefined;
-  port: string | undefined;
-}) {
-  // TODO: Does it go to this server?
-  console.log("lookup", options);
-}
-
-/**
- * The main function executed from the cli interface
- */
-export async function main() {
-  return;
-
+  //ProcessManager.bootstrap();
   // TODO: new experiments
   //   for (const { port } of operations.uniquePorts) {
   //     const a = await Network.isPortAvailable(port);
@@ -70,7 +45,6 @@ export async function main() {
   //     const a = await Network.nslookup(hostname);
   //     console.log(hostname, a);
   //   }
-
   //   // If redirections are needed, start a proxy server
   //   if (!isTest && allRedirectes.length) {
   //     // Add routes to the redirection proxy
@@ -124,4 +98,18 @@ export async function main() {
   //   console.error(err);
   // }
   // }
+}
+
+/** Checks if the current app config file is valid */
+export async function validate(options: { network: boolean }) {
+  console.log("validate");
+}
+
+/** Look up good to know information */
+export async function lookup(options: {
+  domain: string | undefined;
+  port: string | undefined;
+}) {
+  // TODO: Does it go to this server?
+  console.log("lookup", options);
 }

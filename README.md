@@ -9,6 +9,10 @@
 - [ ] process management flow
 - [ ] state update flow
 
+## Körbarhet 1.0
+
+- [ ] Alla +program.ts funktioner ska finnas och fungera
+
 ## Funktioner som behövs
 
 - [ ] Skaru.se behöver stöd för wilda subdomäner vilket inte alls fungerar
@@ -16,6 +20,10 @@
 ## Funktioner jag vill ha
 
 - [ ] Ersätta Goatcounter med inbyggd funktionalitet
+
+## Cleanup
+
+- [ ] Ersätt alla console.log med logger funktioner
 
 ---
 
