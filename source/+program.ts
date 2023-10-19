@@ -40,7 +40,7 @@ export async function status(options: { network: boolean }) {
 
 /** Reconfigures the manager with modifications to the app config file */
 export async function reload() {
-  // FIXME: CONTINUE HERe this is where im currently working
+  // FIXME: CONTINUE HERE this is where im currently working
   const state = await State.updateManagerState();
   const runners = await ProcessManager.list();
   Certificates.bootstrap();
@@ -55,7 +55,10 @@ export async function reload() {
   console.log("CERTIFICATES");
   console.log(JSON.stringify(certs, null, 4));
 
-  //ProcessManager.bootstrap();
+  console.log("Performing changes to internal processes...");
+  await InternalProcesses.performOperations(state.operations.internalProcesses);
+  console.log("Done!");
+
   // TODO: new experiments
   //   for (const { port } of operations.uniquePorts) {
   //     const a = await Network.isPortAvailable(port);

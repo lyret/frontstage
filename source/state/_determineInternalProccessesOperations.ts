@@ -1,5 +1,5 @@
 import * as Path from "node:path";
-import * as ProcessManager from "../processes/pm2";
+import { InternalProcesses } from "../processes";
 
 /**
  * Uses the next and previous manager state and environmental variables
@@ -9,37 +9,65 @@ export async function determineInternalProccessesOperations(
   prevState: Manager.ApplicationsState,
   nextState: Manager.ApplicationsState
 ): Promise<Manager.Operations["internalProcesses"]> {
-  const start: Manager.ApplicationsState["internalProcesses"] = [];
-  const restart: Manager.ApplicationsState["internalProcesses"] = [];
-  const remove: Manager.ApplicationsState["internalProcesses"] = [];
+  // Create the context object for the determination function
+  const context = {
+    // Get a list of running processes
+    runningInternalProcesses: await InternalProcesses.list(),
+    // Internal processes should be hard restarted when new builds are available
+    // that is so that changed env variables and other configurations are
+    // updated when the process restarts
+    updateNeeded: prevState.buildNumber != nextState.buildNumber,
+    // Determined operations on internal processes
+    operations: {
+      start: [],
+      restart: [],
+      remove: [],
+    } as Manager.Operations["internalProcesses"],
+  };
 
-  const runningInternalProcesses = (await ProcessManager.list()).filter(
-    (proc) => proc.namespace == "manager"
+  // Run the determination function for each possible internal process
+
+  // The Dummy process should be always running
+  determineOp(dummyProcess, context, () => true);
+
+
+  // Return the resulting operations
+  return context.operations;
+}
+
+/**
+ * Determines what operation should be performed on the given process
+ * using the given lambda function
+ */
+function determineOp(
+  process: Manager.ApplicationsState["internalProcesses"][0],
+  ctx: {
+    runningInternalProcesses: Array<Process.Status>;
+    updateNeeded: boolean;
+    operations: Manager.Operations["internalProcesses"];
+  },
+  condition: () => boolean
+) {
+  const shouldBeRunning = condition();
+  const existingProcess = ctx.runningInternalProcesses.find(
+    (proc) => proc.label == process.label
   );
-
-  // Internal processes should be restarted when new builds are available
-  const restartNeeded = prevState.buildNumber != nextState.buildNumber;
-
-  // The Dummy process should be running
-  const shouldBeRunning = true;
-  const existingProcess = runningInternalProcesses.find(
-    (proc) => proc.label == dummyProcess.label
-  );
-
   if (shouldBeRunning) {
+    // The process is not running and needs to be started
     if (!existingProcess || !existingProcess.details?.running) {
-      start.push(dummyProcess);
-    } else if (restartNeeded) {
-      restart.push(dummyProcess);
+      ctx.operations.start.push(process);
+    }
+    // The process is running but needs to be updated, add it
+    // also to 'start' so that its hard restarted
+    else if (ctx.updateNeeded) {
+      ctx.operations.start.push(process);
     }
   } else if (existingProcess) {
-    remove.push(dummyProcess);
+    ctx.operations.remove.push(process);
   }
-
-  // TODO: remove this line, move that function
-  await handleInternalProcessesOperations({ start, restart, remove });
-  return { start, restart, remove };
 }
+
+// AVAILABLE INTERNAL PROCESSES
 
 /** Dummy process options */
 const dummyProcess: Manager.ApplicationsState["internalProcesses"][0] = {
@@ -51,26 +79,3 @@ const dummyProcess: Manager.ApplicationsState["internalProcesses"][0] = {
   },
 };
 
-/**
- * TODO: document
- */
-export async function handleInternalProcessesOperations(
-  operations: Manager.Operations["internalProcesses"]
-) {
-  // Stop and remove processes that should not be running anymore
-  for (const process of operations.remove) {
-    await ProcessManager.remove(process.label);
-  }
-
-  // Restart processes that are needed
-  for (const process of operations.restart) {
-    await ProcessManager.restart(process.label);
-  }
-
-  // Start new processes that should be running
-  for (const process of operations.start) {
-    await ProcessManager.start(process.label, process.process);
-  }
-  // Save the list of processes so that PM2 can resurrect them on restart
-  await ProcessManager.dump();
-}

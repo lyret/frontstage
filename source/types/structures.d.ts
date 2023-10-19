@@ -79,7 +79,7 @@ declare global {
       /** List of all internal server manaker processes that should be managed by PM2 */
       internalProcesses: Array<{
         label: string;
-        process: Required<Process.Options>;
+        process: Process.Options;
       }>;
       /** List of all application processes that should be managed by PM2 */
       applicationProcesses: Array<{
@@ -87,7 +87,7 @@ declare global {
         process: Required<Process.Options>;
       }>;
       /** The build number for the server manager source code */
-      buildNumber: number;
+      buildNumber: number; // NOTE: Build number should not be in application state!
       /** List of all applications as configured in the YAML file */
       configuration: Array<Configuration.Application>;
     };
