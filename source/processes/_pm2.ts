@@ -9,6 +9,7 @@ const logger = createLogger("Processes");
  * Get an array of all processes managed by PM2
  */
 export async function list() {
+  await connect();
   return new Promise<Array<Process.Status>>((resolve, reject) => {
     PM2.list((err, list) => {
       if (err) {
@@ -39,14 +40,15 @@ export async function restart(label: string) {
     PM2.restart(label, (err) => {
       if (err) {
         reject(err);
+        disconnect();
       } else {
         // Wait 1 and then resolve
         setTimeout(() => {
           find(label).then((proc) => {
             resolve(proc!);
-            disconnect();
           });
         });
+        disconnect();
       }
     });
   });
@@ -66,9 +68,9 @@ export async function stop(label: string) {
         setTimeout(() => {
           find(label).then((proc) => {
             resolve(proc!);
-            disconnect();
           });
         }, 1000);
+        disconnect();
       }
     });
   });
@@ -83,11 +85,13 @@ export async function remove(label: string) {
     PM2.delete(label, (err) => {
       if (err) {
         reject(err);
+        disconnect();
       } else {
         // Wait 1 and then resolve
         setTimeout(async () => {
           resolve();
         }, 1000);
+        disconnect();
       }
     });
   });
@@ -95,7 +99,8 @@ export async function remove(label: string) {
 
 /**
  * Start a new process with the given options, will restart the process
- * if it already exists
+ * if it already exists and update env variables and other process options,
+ * the options 'script', 'interpreter', 'namespace' and the label can not be changed and requires the process to be removed first
  */
 export async function start(label: string, options: Process.Options) {
   await connect();
@@ -103,35 +108,19 @@ export async function start(label: string, options: Process.Options) {
     PM2.start({ name: label, ...options }, (err) => {
       if (err) {
         reject(err);
+        disconnect();
       } else {
         // Wait 1 for the process to start
         // to find the running process list
         setTimeout(() => {
           find(label).then((proc) => {
             resolve(proc!);
-            disconnect();
           });
         }, 1000);
+        disconnect();
       }
     });
   });
-}
-
-/**
- * Makes a hard restart of the given process if found, that is first delete it and then
- * re-add it with the given options - this allows environmental variables and execution
- * instructions to be changed
- * NOTE: seems like start does this already, is hardrestart needed? Test with env options on dummy
- */
-async function hardrestart(
-  label: string,
-  options: Process.Options
-): Promise<Process.Status> {
-  const proc = await find(label);
-  if (proc) {
-    await remove(label);
-  }
-  return start(label, options);
 }
 
 /**
@@ -146,6 +135,7 @@ export async function sendMessage(
   data: object = {},
   waitForResponse: boolean = false
 ) {
+  await connect();
   return new Promise<boolean>((resolve, reject) => {
     PM2.sendDataToProcessId(
       proc.index,
@@ -191,57 +181,6 @@ export async function sendMessage(
 }
 
 /**
- * Starts the manager as a background process in PM2,
- * or restarts it so that the latest build is used.
- *
- * Called to make sure that both PM2 and the daemon of the server
- * manager is running and is up-to-date.
- */
-export async function bootstrap(): Promise<Process.Status> {
-  await connect();
-
-  // Start or restart the PM2 process of the server manager daemon
-  const proc = await hardrestart(PROCESS_MANAGER_LABEL, {
-    script: Path.resolve(SOURCE_DIRECTORY, PROCESS_MANAGER_SCRIPT),
-    cwd: SOURCE_DIRECTORY,
-    namespace: "lol3",
-  } as any);
-  console.log(
-    await sendMessage(
-      proc,
-      "operation",
-      { timestamp: Date.now() + 10000 },
-      true
-    )
-  );
-  return proc;
-}
-
-/**
- * Makes sure that the PM2 daemon is running and that
- * its possible to connect to it
- */
-export async function connect() {
-  return new Promise<void>((resolve, reject) => {
-    PM2.connect((err) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve();
-      }
-    });
-  });
-}
-
-/**
- * Disconnects from the PM2 daemon, needs to be called
- * to not keep the manager process running indefinitely
- */
-export async function disconnect() {
-  PM2.disconnect();
-}
-
-/**
  * Dumps the current process list in PM2 to file so
  * that the same processes will be restored on restart
  */
@@ -258,6 +197,30 @@ export async function dump() {
       disconnect();
     });
   });
+}
+
+/**
+ * Makes sure that the PM2 daemon is running and that
+ * its possible to connect to it
+ */
+async function connect() {
+  return new Promise<void>((resolve, reject) => {
+    PM2.connect((err) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
+/**
+ * Disconnects from the PM2 daemon, needs to be called
+ * to not keep the manager process running indefinitely
+ */
+async function disconnect() {
+  PM2.disconnect();
 }
 
 /** Helper function that transforms a process description to PM2 to a standardised format */

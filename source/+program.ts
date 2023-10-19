@@ -1,5 +1,5 @@
 import * as Certificates from "./certificates";
-import * as ProcessManager from "./processes/pm2";
+import * as ProcessManager from "./processes/_pm2"; // NOTE: remove this import
 import * as State from "./state";
 import { createLogger } from "./statistics";
 

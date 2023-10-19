@@ -142,17 +142,7 @@ declare global {
        * as a background processes on the runtime machine
        */
       // TODO: Document
-      process: {
-        // TODO: This type does not support namespace for PM2!
-        script: string;
-        cwd?: string;
-        // TODO: Process options does not support interpreter?
-        intepreter?: string;
-        // TODO: Process options does not support args?
-        args?: string;
-        // TODO: Process options does not support env?
-        env?: Record<string, string | number>;
-      };
+      process: Omit<Process.Options, "namespace">;
     };
   }
 
@@ -206,6 +196,17 @@ declare global {
       script: string;
       /** The path to the working directory to execute from */
       cwd: string;
+      /**
+       * The interpreter to use for the script (eg “python”, “ruby”, “bash”, etc)
+       * The value “none” will execute the ‘script’ as a binary executable
+       */
+      intepreter?: string | "none";
+      /**
+       * A string of composed arguments to pass to the script
+       */
+      args?: string;
+      /** The environment variables to pass on to the process */
+      env?: { [key: string]: string };
     };
   }
 
