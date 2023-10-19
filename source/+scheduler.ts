@@ -1,29 +1,8 @@
-// // SERVER MANAGER DAEMON
-// // This file defines the background process that should always be running
-// // on the server.
-// //
-// // see ./program.mjs for the implementation of available cli commands
-//
-// // console.log("hej");
-/**
- * Creates a scheduled call to the given function
- *
- * A timeout fires internally once a day until the last
- * day and then fires the given callback when the time has finally
- * expired.
- *
- * Useful as the 'timeout' in node is only good for about 24 days.
- */
-// TODO: document and continue with this
-
 import { createLogger } from "./statistics";
 
-type Operation = {
-  /** The UNIX timestamp for when the operation should be run */
-  timestamp: number;
-  /** Has been performed */
-  performed: boolean;
-};
+// SCHEDULER
+// This file contains the an internal process for scheduling operations
+// to be performed at a later time. It keeps a
 
 /** Logger */
 const logger = createLogger("Scheduler");
@@ -32,10 +11,10 @@ const logger = createLogger("Scheduler");
 let timeout: NodeJS.Timeout | null = null;
 
 /** List of operations to perform, sorted by UNIX timestamp */
-let operations: Array<Operation> = [];
+let operations: Array<Scheduled.Operation> = [];
 
 /** Adds an operation to the list and make sure its sorted by UNIX timestamp */
-function add(op: Operation) {
+function add(op: Scheduled.Operation) {
   operations.push(op);
   operations = operations.sort((a, b) => {
     if (a.timestamp < b.timestamp) {
@@ -46,7 +25,7 @@ function add(op: Operation) {
     }
     return 0;
   });
-  console.log(JSON.stringify(operations)); // TODO: continue with scheduling here
+
   // If this operation is the new earliest one, recreate the internal timeout
   // and perform any operations
   if (operations.findIndex((o) => o.timestamp == op.timestamp) == 0) {
@@ -55,7 +34,7 @@ function add(op: Operation) {
 }
 
 /** Perform a single operation */
-async function performOperation(op: Operation) {
+async function performOperation(op: Scheduled.Operation) {
   console.log("PERFORMING", op);
   // FIXME: Perform operation
 }
@@ -80,13 +59,18 @@ async function performOperations() {
 
     for (const op of operations) {
       if (!op.performed && op.timestamp <= initialNow) {
-        op!.performed = true;
+        op.performed = true;
         logger.trace("Performing operation", op);
-        await performOperation(op);
+        try {
+          await performOperation(op);
+        } catch (err) {
+          logger.error("Failed to perform the operation", err, op);
+          op.performed = false;
+        }
       }
     }
   } catch (err) {
-    logger.error("Failed when performing operations", err, { operations });
+    logger.error("Failed when trying to perform operations", err);
   } finally {
     // Filter and sort the operations remaining to be perform
     operations = operations
@@ -120,6 +104,13 @@ async function performOperations() {
   }
 }
 
+/**
+ * Creates a timeout that fires at the next scheduled operation, or at least once a day
+ * as the 'timeout' in node is only good for about 24 days.
+ * When the timeout fires all scheduled operations with that timestamp are performed.
+ * Also when new scheduled operations are received from the process bus the timer
+ * is updated accordingly
+ */
 export async function main() {
   // Add an event handler that validates and adds incoming operations
   process.on("message", (message: { id: number; data: any; topic: string }) => {
@@ -128,22 +119,22 @@ export async function main() {
     try {
       if (message.topic == "operation") {
         // Validate and add the operation to the list
-        const newOperation: Operation = {
+        const newOperation: Scheduled.Operation = {
           timestamp: Number(message.data.timestamp),
           performed: false,
         };
         add(newOperation);
 
-        // Report that the operation was added
+        // Report that the operation was added with code 200
         process.send!({
           type: "process:msg",
           data: {
-            status: 200,
+            status: 500,
           },
         });
       }
     } catch (err) {
-      // Report that the operation failed to be added
+      // Report that the operation failed to be added with code 500
       process.send!({
         type: "process:msg",
         data: {
@@ -158,5 +149,5 @@ export async function main() {
   performOperations();
 }
 
-// Starts the timeout
+// Starts the internal process
 main();

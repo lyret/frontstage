@@ -116,6 +116,21 @@ declare global {
   }
 
   /**
+   * Type definitions for scheduled operations
+   */
+  namespace Scheduled {
+    /**
+     * A queued operation to be performed on the included timestamp
+     */
+    type Operation = {
+      /** The UNIX timestamp for when the operation should be run */
+      timestamp: number;
+      /** Indicates that the operation has been performed */
+      performed: boolean;
+    };
+  }
+
+  /**
    * Type definitions for configuration of the server manager
    */
   namespace Configuration {

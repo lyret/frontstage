@@ -30,6 +30,8 @@ export async function determineInternalProccessesOperations(
   // The Dummy process should be always running
   determineOp(dummyProcess, context, () => true);
 
+  // The Scheduler process should be always running
+  determineOp(schedulerProcess, context, () => true);
 
   // Return the resulting operations
   return context.operations;
@@ -79,3 +81,12 @@ const dummyProcess: Manager.ApplicationsState["internalProcesses"][0] = {
   },
 };
 
+/** Scheduler process options */
+const schedulerProcess: Manager.ApplicationsState["internalProcesses"][0] = {
+  label: "SCHEDULER",
+  process: {
+    cwd: BIN_DIRECTORY,
+    namespace: "manager",
+    script: Path.resolve(BIN_DIRECTORY, "+scheduler.js"),
+  },
+};

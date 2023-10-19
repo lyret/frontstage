@@ -1,5 +1,6 @@
 import * as Certificates from "./certificates";
 import * as ProcessManager from "./processes/_pm2"; // NOTE: remove this import
+import { InternalProcesses, ScheduledOperations } from "./processes";
 import * as State from "./state";
 import { createLogger } from "./statistics";
 
@@ -35,7 +36,12 @@ export async function status(options: { network: boolean }) {
   }, {});
 
   console.table(table);
-  return;
+
+  // FIXME: testcode
+  await ScheduledOperations.scheduleOperation({
+    timestamp: Date.now() + 10000,
+  });
+  console.log("sent!");
 }
 
 /** Reconfigures the manager with modifications to the app config file */
