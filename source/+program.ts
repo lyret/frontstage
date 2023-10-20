@@ -1,8 +1,9 @@
 import * as Certificates from "./certificates";
-import * as ProcessManager from "./processes/_pm2"; // NOTE: remove this import
+import * as ProcessManager from "./processes/_pm2";
 import { InternalProcesses } from "./processes";
 import * as State from "./state";
 import { createLogger, scheduleOperation } from "./messages";
+// NOTE: clean up imports
 
 // PROGRAM
 // This file contains the available commands callable

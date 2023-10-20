@@ -39,6 +39,14 @@
 
 - [ ] General documentation
 
+### Ideas
+
+- [ ] Tests
+
+- [ ] Cluster support
+
+- [ ] Rewrite for Bun?
+
 ### Avgränsningar:
 
 - [ ] Setting the log level using the CLI requires rebuilding

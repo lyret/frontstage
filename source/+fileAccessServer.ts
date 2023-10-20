@@ -1,4 +1,4 @@
-// TODO (2024): continue with the ftp access module: https://www.npmjs.com/package/@nearst/ftp
+// NOTE (2024): continue with the ftp access module: https://www.npmjs.com/package/@nearst/ftp
 // import * as Path from "node:path";
 //
 // // Quick start, create an active ftp server.

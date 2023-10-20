@@ -288,7 +288,7 @@ function readCertificateFromFileSystem(
 //         timeToExpiration,
 //         expiresOn,
 //       });
-//       await _addOrRenewCertificate(hostname, renewalMethod, true, 5);
+//       await addOrRenewCertificate(hostname, renewalMethod, true, 5);
 //     }
 //
 //     // Recreate the timer
