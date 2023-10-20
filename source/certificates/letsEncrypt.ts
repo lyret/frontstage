@@ -1,6 +1,6 @@
 import * as HTTP from "node:http";
 import * as AcmeClient from "acme-client";
-import { createLogger } from "../statistics";
+import { createLogger } from "../messages";
 
 /** Runtime cache of outstanding challenges to Lets Encrypt */
 const outstandingChallenges = new Map<string, string>();

@@ -1,5 +1,5 @@
 import * as Forge from "node-forge";
-import { createLogger } from "../statistics";
+import { createLogger } from "../messages";
 
 /** Logger */
 const logger = createLogger("Self Signed Certificate");

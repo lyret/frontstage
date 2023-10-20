@@ -1,4 +1,4 @@
-import { createLogger } from "./statistics";
+import { createLogger } from "./messages";
 
 // DUMMY
 // This is an internal process of the server manager, it simply outputs to the console

@@ -1,6 +1,5 @@
-import * as Path from "node:path";
 import * as PM2 from "pm2";
-import { createLogger } from "../statistics";
+import { createLogger } from "../messages";
 
 /** Logger */
 const logger = createLogger("Processes");
@@ -120,63 +119,6 @@ export async function start(label: string, options: Process.Options) {
         disconnect();
       }
     });
-  });
-}
-
-/**
- * Opens a message bus to a process in PM2
- * and sends a message with the given topic and data.
- * returns true if successful
- * @param waitForResponse waits a response with status 200 before resolving
- */
-export async function sendMessage(
-  proc: Process.Status,
-  topic: string,
-  data: object = {},
-  waitForResponse: boolean = false
-) {
-  await connect();
-  return new Promise<boolean>((resolve, reject) => {
-    PM2.sendDataToProcessId(
-      proc.index,
-      {
-        id: proc.index,
-        data,
-        topic,
-      },
-      (err) => {
-        if (err) {
-          reject(err);
-        } else {
-          // Possibly listen to a response message from the process
-          // should contain the data { status: 200 } to indicate success
-          if (waitForResponse) {
-            PM2.launchBus((err, pm2_bus) => {
-              if (err) {
-                reject(err);
-              } else {
-                pm2_bus.on(
-                  "process:msg",
-                  (packet: { data?: { status: any } }) => {
-                    pm2_bus.close();
-                    disconnect();
-
-                    if (packet.data?.status && packet.data?.status == 200) {
-                      resolve(true);
-                    } else {
-                      resolve(false);
-                    }
-                  }
-                );
-              }
-            });
-          } else {
-            resolve(true);
-            disconnect();
-          }
-        }
-      }
-    );
   });
 }
 

@@ -116,13 +116,13 @@ declare global {
   }
 
   /**
-   * Type definitions for scheduled operations
+   * Type definitions for broadcasted messages
    */
-  namespace Scheduled {
+  namespace Messages {
     /**
-     * A queued operation to be performed on the included timestamp
+     * A operation queued to be performed on the included timestamp
      */
-    type Operation = {
+    type ScheduledOperation = {
       /** The UNIX timestamp for when the operation should be run */
       timestamp: number;
       /** Indicates that the operation has been performed */

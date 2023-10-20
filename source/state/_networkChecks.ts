@@ -2,7 +2,7 @@ import * as HTTP from "node:http";
 import * as DNS from "node:dns";
 import * as NET from "node:net";
 import * as OS from "node:os";
-import { createLogger } from "../statistics";
+import { createLogger } from "../messages";
 
 // This file contains utility methods for checking network status of the runtime
 // machine and getting related network information

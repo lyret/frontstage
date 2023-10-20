@@ -1,8 +1,8 @@
 import * as Certificates from "./certificates";
 import * as ProcessManager from "./processes/_pm2"; // NOTE: remove this import
-import { InternalProcesses, ScheduledOperations } from "./processes";
+import { InternalProcesses } from "./processes";
 import * as State from "./state";
-import { createLogger } from "./statistics";
+import { createLogger, scheduleOperation } from "./messages";
 
 // PROGRAM
 // This file contains the available commands callable
@@ -38,7 +38,7 @@ export async function status(options: { network: boolean }) {
   console.table(table);
 
   // FIXME: testcode
-  await ScheduledOperations.scheduleOperation({
+  await scheduleOperation({
     timestamp: Date.now() + 10000,
   });
   console.log("sent!");

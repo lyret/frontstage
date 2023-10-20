@@ -3,7 +3,7 @@ import * as TLS from "node:tls";
 import * as Forge from "node-forge";
 import * as FSE from "fs-extra";
 import { normalizeName } from "./_utilities";
-import { createLogger } from "../statistics";
+import { createLogger } from "../messages";
 
 /** Logger */
 const logger = createLogger("Certificates");

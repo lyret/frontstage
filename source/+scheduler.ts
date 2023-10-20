@@ -1,4 +1,4 @@
-import { createLogger } from "./statistics";
+import { createLogger, onScheduleOperation } from "./messages";
 
 // SCHEDULER
 // This file contains the an internal process for scheduling operations
@@ -11,10 +11,10 @@ const logger = createLogger("Scheduler");
 let timeout: NodeJS.Timeout | null = null;
 
 /** List of operations to perform, sorted by UNIX timestamp */
-let operations: Array<Scheduled.Operation> = [];
+let operations: Array<Messages.ScheduledOperation> = [];
 
 /** Adds an operation to the list and make sure its sorted by UNIX timestamp */
-function add(op: Scheduled.Operation) {
+function add(op: Messages.ScheduledOperation) {
   operations.push(op);
   operations = operations.sort((a, b) => {
     if (a.timestamp < b.timestamp) {
@@ -34,7 +34,7 @@ function add(op: Scheduled.Operation) {
 }
 
 /** Perform a single operation */
-async function performOperation(op: Scheduled.Operation) {
+async function performOperation(op: Messages.ScheduledOperation) {
   console.log("PERFORMING", op);
   // FIXME: Perform operation
 }
@@ -113,36 +113,12 @@ async function performOperations() {
  */
 export async function main() {
   // Add an event handler that validates and adds incoming operations
-  process.on("message", (message: { id: number; data: any; topic: string }) => {
-    logger.trace("Received new message", message);
-
-    try {
-      if (message.topic == "operation") {
-        // Validate and add the operation to the list
-        const newOperation: Scheduled.Operation = {
-          timestamp: Number(message.data.timestamp),
-          performed: false,
-        };
-        add(newOperation);
-
-        // Report that the operation was added with code 200
-        process.send!({
-          type: "process:msg",
-          data: {
-            status: 500,
-          },
-        });
-      }
-    } catch (err) {
-      // Report that the operation failed to be added with code 500
-      process.send!({
-        type: "process:msg",
-        data: {
-          status: 500,
-          err: err,
-        },
-      });
-    }
+  onScheduleOperation((operation) => {
+    logger.trace("Received new message", operation);
+    add({
+      ...operation,
+      performed: false,
+    });
   });
 
   logger.success("Waiting for operations...");

@@ -6,7 +6,7 @@ import * as InternalRoutes from "./traffic/internalRoutes";
 import * as Redirections from "./traffic/redirections";
 import * as Output from "./traffic/httpHandlers";
 import * as Certificates from "./certificates";
-import { createLogger } from "./statistics";
+import { createLogger } from "./messages";
 
 // PUBLIC WEB SERVER
 // This is a subprocess of the server manager, it is loaded and runs in the process manager. It handles all incomming traffic to the server

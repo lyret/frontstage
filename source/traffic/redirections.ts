@@ -1,7 +1,7 @@
 import * as HTTP from "node:http";
 import * as Path from "node:path";
 import * as Output from "./httpHandlers";
-import { createLogger } from "../statistics";
+import { createLogger } from "../messages";
 
 /** Logger */
 const logger = createLogger("Redirections");

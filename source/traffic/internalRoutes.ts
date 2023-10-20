@@ -3,7 +3,7 @@ import * as NET from "node:net";
 import * as URL from "node:url";
 import * as HttpProxy from "http-proxy";
 import * as Output from "./httpHandlers";
-import { createLogger } from "../statistics";
+import { createLogger } from "../messages";
 
 /** Logger */
 const logger = createLogger("Internal Routes");

@@ -1,6 +1,6 @@
 import * as Path from "node:path";
 import * as FSE from "fs-extra";
-import { createLogger } from "../statistics";
+import { createLogger } from "../messages";
 import { generateSelfSignedCertificate } from "./_generateSelfSignedCertificate";
 import { requestCertificateFromLetsEncrypt } from "./letsEncrypt";
 import { createCertificate } from "./_createCertificate";
