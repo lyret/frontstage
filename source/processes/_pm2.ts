@@ -8,7 +8,6 @@ const logger = createLogger("Processes");
  * Get an array of all processes managed by PM2
  */
 export async function list() {
-  await connect();
   return new Promise<Array<Process.Status>>((resolve, reject) => {
     PM2.list((err, list) => {
       if (err) {
@@ -16,7 +15,6 @@ export async function list() {
       } else {
         resolve(list.map((proc) => transform(proc)));
       }
-      disconnect();
     });
   });
 }
@@ -34,12 +32,10 @@ export async function find(label: string): Promise<Process.Status | undefined> {
  * Restart the process with the given label, if found
  */
 export async function restart(label: string) {
-  await connect();
   return new Promise<Process.Status>((resolve, reject) => {
     PM2.restart(label, (err) => {
       if (err) {
         reject(err);
-        disconnect();
       } else {
         // Wait 1 and then resolve
         setTimeout(() => {
@@ -47,7 +43,6 @@ export async function restart(label: string) {
             resolve(proc!);
           });
         });
-        disconnect();
       }
     });
   });
@@ -57,7 +52,6 @@ export async function restart(label: string) {
  * Stops the process with the given label, if found
  */
 export async function stop(label: string) {
-  await connect();
   return new Promise<Process.Status>((resolve, reject) => {
     PM2.stop(label, (err) => {
       if (err) {
@@ -69,7 +63,6 @@ export async function stop(label: string) {
             resolve(proc!);
           });
         }, 1000);
-        disconnect();
       }
     });
   });
@@ -79,18 +72,15 @@ export async function stop(label: string) {
  * If found deletes the process with the given label completely from pm2
  */
 export async function remove(label: string) {
-  await connect();
   return new Promise<void>((resolve, reject) => {
     PM2.delete(label, (err) => {
       if (err) {
         reject(err);
-        disconnect();
       } else {
         // Wait 1 and then resolve
         setTimeout(async () => {
           resolve();
         }, 1000);
-        disconnect();
       }
     });
   });
@@ -102,12 +92,10 @@ export async function remove(label: string) {
  * the options 'script', 'interpreter', 'namespace' and the label can not be changed and requires the process to be removed first
  */
 export async function start(label: string, options: Process.Options) {
-  await connect();
   return new Promise<Process.Status>((resolve, reject) => {
     PM2.start({ name: label, ...options }, (err) => {
       if (err) {
         reject(err);
-        disconnect();
       } else {
         // Wait 1 for the process to start
         // to find the running process list
@@ -116,7 +104,6 @@ export async function start(label: string, options: Process.Options) {
             resolve(proc!);
           });
         }, 1000);
-        disconnect();
       }
     });
   });
@@ -127,7 +114,6 @@ export async function start(label: string, options: Process.Options) {
  * that the same processes will be restored on restart
  */
 export async function dump() {
-  await connect();
   return new Promise<void>((resolve) => {
     PM2.dump((err) => {
       if (err) {
@@ -136,7 +122,6 @@ export async function dump() {
       } else {
         resolve();
       }
-      disconnect();
     });
   });
 }
@@ -145,7 +130,7 @@ export async function dump() {
  * Makes sure that the PM2 daemon is running and that
  * its possible to connect to it
  */
-async function connect() {
+export async function connect() {
   return new Promise<void>((resolve, reject) => {
     PM2.connect((err) => {
       if (err) {
@@ -161,7 +146,7 @@ async function connect() {
  * Disconnects from the PM2 daemon, needs to be called
  * to not keep the manager process running indefinitely
  */
-async function disconnect() {
+export async function disconnect() {
   PM2.disconnect();
 }
 

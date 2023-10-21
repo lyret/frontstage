@@ -32,6 +32,14 @@ export async function sendMessage<T>(topic: string, message: T) {
   await broadcastChannel.postMessage(message);
 }
 
+/** Closes all open broadcast channels */
+export async function cleanup() {
+  for (const channel of openChannels.values()) {
+    await channel.close();
+  }
+  openChannels.clear();
+}
+
 /** Utility function that gets an open messages channel for the given topic */
 function getChannel<T>(topic: string): BroadcastChannel<T> {
   // Append the current build version number to the topic to avoid version conflicts
