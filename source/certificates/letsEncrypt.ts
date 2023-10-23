@@ -1,5 +1,6 @@
 import * as HTTP from "node:http";
 import * as AcmeClient from "acme-client";
+import * as Output from "../traffic/httpHandlers";
 import { createLogger } from "../messages";
 
 /** Runtime cache of outstanding challenges to Lets Encrypt */
@@ -147,7 +148,7 @@ export function handleLetsEncryptChallengeRequest(
   // Make sure that this request actually is meant for this service
   if (!(req.url && isLetsEncryptChallengeRequest(req))) {
     logger.warn(`Got a request thats not an ACME-challenge: ${req.url}`);
-    return Output.Http.BadRequest(req, res);
+    return Output.BadRequest(req, res);
   }
 
   // Get the token from the url
@@ -168,13 +169,13 @@ export function handleLetsEncryptChallengeRequest(
   // ...No host information
   if (!req.headers.host) {
     logger.warn("Got a request with not host header set");
-    return Output.Http.NotFound(req, res);
+    return Output.NotFound(req, res);
   }
 
   // No token in request
   if (!token) {
     logger.warn("Got a request without an included token");
-    return Output.Http.NotFound(req, res);
+    return Output.NotFound(req, res);
   }
 
   const key = outstandingChallenges.get(
@@ -185,11 +186,11 @@ export function handleLetsEncryptChallengeRequest(
   // No outstanding challenge
   if (!key) {
     logger.trace(`No outstanding challenge found for token: ${token}`);
-    return Output.Http.NotFound(req, res);
+    return Output.NotFound(req, res);
   }
 
   // Respond with the key corresponding to the token from the outstanding challenges
-  return Output.Http.Ok(req, res, key);
+  return Output.Ok(req, res, key);
 }
 
 /** Helper function to turn a hostname and token into a string used to index the challenges collection */
