@@ -1,6 +1,6 @@
 import * as Path from "node:path";
 import * as FSE from "fs-extra";
-import { createLogger } from "../messages";
+import { createLogger, scheduleOperation } from "../messages";
 import { generateSelfSignedCertificate } from "./_generateSelfSignedCertificate";
 import { requestCertificateFromLetsEncrypt } from "./letsEncrypt";
 import { createCertificate } from "./_createCertificate";
@@ -42,13 +42,10 @@ export async function renew(
       `No certificate exists that can be renewed for the hostname ${hostname}`
     );
   }
-  const { expiresOn, renewalMethod, renewWithin } = loadedCertificate;
+  const { renewalMethod, renewWithin } = loadedCertificate;
 
   // Calculate the milliseconds to certificates expiration
-  let initialNow = Date.now();
-  let timeToExpiration = expiresOn
-    ? expiresOn.valueOf() - initialNow - renewWithin
-    : 0;
+  const timeToExpiration = getTimeToExpiration(loadedCertificate);
 
   // Stop if the certificate is not due to be renewed, and the renewal is not forced
   if (timeToExpiration > 0 && !forceRenewal) {
@@ -128,7 +125,9 @@ export function remove(hostname: string): void {
 
 /**
  * Loads all the certificates from the cache to the in memory collection
- * Should be called once during initialisation
+ * Should be called once to make sure that all certificates are loaded
+ * in memory
+ * TODO: where to call? Rename!
  */
 export function bootstrap(): void {
   FSE.readdirSync(CERTIFICATES_DIRECTORY)
@@ -248,56 +247,44 @@ function readCertificateFromFileSystem(
 // TODO: Re-add, was run on asset creation
 // Add a renewal timer, an intervaled function call to create
 // new certificates before the old ones expires
-// const _renewalTimer = ScheduledFunction({
-//   milliseconds: ONE_HOUR,
-//   callback: async () => {
-//     logger.info("Checking for certificates that needs renewals");
-//
-//     // Keep the datetime for when the renewal function runs
-//     const initialNow = Date.now();
-//
-//     // Remember the shortest expiration time among loaded certificates
-//     let shortestTimeToExpiration = ONE_MONTH;
-//
-//     // Iterate over all loaded certificates
-//     for (const {
-//       expiresOn,
-//       metadata: { renewalMethod, hostname, renewWithin },
-//     } of _map.values()) {
-//       // Calculate the milliseconds to certificates expiration
-//       let timeToExpiration = expiresOn
-//         ? expiresOn.valueOf() - initialNow - renewWithin
-//         : 0;
-//
-//       // If the certificate is not due to be renewed, do not renew it - but keep the time
-//       // left to expiration
-//       if (timeToExpiration > 0) {
-//         shortestTimeToExpiration = Math.max(
-//           5000,
-//           Math.min(timeToExpiration, shortestTimeToExpiration)
-//         );
-//         logger.trace(
-//           `The certificate for "${hostname}" is not in need of renewal`,
-//           { timeToExpiration, expiresOn }
-//         );
-//         continue;
-//       }
-//
-//       // Force a renewal of the certificate with the 5 retries
-//       logger.info(`Renewing the certificate for "${hostname}"`, {
-//         timeToExpiration,
-//         expiresOn,
-//       });
-//       await addOrRenewCertificate(hostname, renewalMethod, true, 5);
-//     }
-//
-//     // Recreate the timer
-//     logger.info(
-//       `The next renewal check will be run in ${Math.round(
-//         shortestTimeToExpiration / 1000 / 60 / 60 / 24
-//       )} days`,
-//       { shortestTimeToExpiration }
-//     );
-//     _renewalTimer.reset(shortestTimeToExpiration);
-//   },
-// });
+// TODO: should add job to scheduler
+// jobs should be unique
+async function renewAllLoadedCertificates() {
+  logger.info("Checking for certificates that needs to be renewed");
+
+  // Remember the shortest expiration time among loaded certificates
+  let shortestTimeToExpiration = ONE_MONTH;
+
+  // Iterate over all loaded certificates and tries to renew them
+  for (const certificate of loadedCertificates.values()) {
+    const timeToExpiration = getTimeToExpiration(certificate);
+
+    // If the certificate is not due to be renewed, do not renew it - but keep the time left to expiration
+    if (timeToExpiration > 0) {
+      shortestTimeToExpiration = Math.max(
+        5000,
+        Math.min(timeToExpiration, shortestTimeToExpiration)
+      );
+    }
+    await renew(certificate.hostname);
+    // FIXME: pure test code
+    scheduleOperation<Messages.ScheduledCertificateRenewal>({
+      timestamp: Date.now() + timeToExpiration,
+      id: certificate.hostname,
+      hostname: certificate.hostname,
+    });
+  }
+
+  return shortestTimeToExpiration;
+}
+
+/**
+ * Utility function to calculate the time to
+ * when the given certificate should be renewed
+ * before becoming invalid
+ */
+function getTimeToExpiration(certificate: Certificates.Certificate): number {
+  return certificate.expiresOn
+    ? certificate.expiresOn.valueOf() - Date.now() - certificate.renewWithin
+    : 0;
+}
