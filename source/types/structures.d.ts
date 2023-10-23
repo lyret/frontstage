@@ -122,12 +122,26 @@ declare global {
     /**
      * A operation queued to be performed on the included timestamp
      */
-    type ScheduledOperation = {
+    type ScheduledOperation<T = {}> = {
       /** The UNIX timestamp for when the operation should be run */
       timestamp: number;
       /** Indicates that the operation has been performed */
       performed: boolean;
-    };
+      /**
+       * If an ID is given the scheduled operation is considered unique
+       * in the queue, any operation added with the same ID will replace
+       * any previous ones
+       */
+      id?: string;
+    } & T;
+
+    /**
+     * An operation that renews the given certificate hostname
+     */
+    type ScheduledCertificateRenewal = ScheduledOperation<{
+      /** Hostname of the certificate to renew */
+      hostname: Certificates.Certificate["hostname"];
+    }>;
   }
 
   /**
