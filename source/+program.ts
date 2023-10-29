@@ -3,8 +3,9 @@ import * as ProcessManager from "./processes/_pm2";
 import { InternalProcesses } from "./processes";
 import * as State from "./state";
 import { createLogger, scheduleOperation } from "./messages";
-import { connect, disconnect } from "./processes/_pm2";
-import { cleanup } from "./messages/_messages";
+import * as PrivateProcesses from "./processes/_pm2";
+import * as PrivateMessages from "./messages/_messages";
+import * as PrivateDatabase from "./database/_connection";
 // NOTE: clean up imports after program functionality is done
 // NOTE: some private imports are made here
 
@@ -168,14 +169,20 @@ export async function lookup(options: {
  */
 async function run(method: () => Promise<void> | void) {
   // Connect to PM2
-  await connect();
+  await PrivateProcesses.connect();
+
+  // Connect to the database
+  await PrivateDatabase.connect();
 
   // Execute the callback function
   await method();
 
   // Disconnect from PM2
-  await disconnect();
+  await PrivateProcesses.disconnect();
+
+  // Disconnect from the database
+  await PrivateDatabase.disconnect();
 
   // Cleanup any open broadcast channels
-  await cleanup();
+  await PrivateMessages.disconnect();
 }
