@@ -41,11 +41,11 @@ env["SOURCE_DIRECTORY"] = env["SOURCE_DIRECTORY"] || installationPath;
 process.env["SOURCE_DIRECTORY"] = env["SOURCE_DIRECTORY"];
 process.env["BIN_DIRECTORY"] = env["BIN_DIRECTORY"];
 process.env["CACHE_DIRECTORY"] = env["CACHE_DIRECTORY"];
-process.env["CERTIFICATES_DIRECTORY"] = env["CERTIFICATES_DIRECTORY"];
+process.env["DATABASE_DIRECTORY"] = env["DATABASE_DIRECTORY"];
 FSE.ensureDir(env["SOURCE_DIRECTORY"]);
 FSE.ensureDir(env["BIN_DIRECTORY"]);
 FSE.ensureDir(env["CACHE_DIRECTORY"]);
-FSE.ensureDir(env["CERTIFICATES_DIRECTORY"]);
+FSE.ensureDir(env["DATABASE_DIRECTORY"]);
 
 // Format the env object correctly for defining global variables
 // in the build file

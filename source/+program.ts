@@ -43,10 +43,10 @@ export async function status(options: { network: boolean }) {
     console.table(table);
 
     // FIXME: testcode
-    await scheduleOperation({
-      timestamp: Date.now() + 10000,
-    });
-    console.log("sent!");
+    console.log("tested!");
+    // await scheduleOperation({
+    //   timestamp: Date.now() + 10000,
+    // });
   });
 }
 
@@ -56,7 +56,6 @@ export async function reload() {
     // FIXME: CONTINUE HERE this is where im currently working
     const state = await State.updateManagerState();
     const runners = await ProcessManager.list();
-    Certificates.bootstrap();
     const certs = Certificates.list();
 
     console.log("RUNNING PROCESSES");

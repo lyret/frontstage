@@ -1,10 +1,10 @@
-import * as Path from "node:path";
-import * as FSE from "fs-extra";
+import * as TLS from "node:tls";
+import * as Forge from "node-forge";
 import { createLogger, scheduleOperation } from "../messages";
 import { generateSelfSignedCertificate } from "./_generateSelfSignedCertificate";
 import { requestCertificateFromLetsEncrypt } from "./letsEncrypt";
-import { createCertificate } from "./_createCertificate";
-import { normalizeName, defaultRenewalMethod } from "./_utilities";
+import { defaultRenewalMethod, getTimeToExpiration } from "./_utilities";
+import { Models } from "../database";
 
 /** Logger */
 const logger = createLogger("Certificates");
@@ -13,17 +13,29 @@ const logger = createLogger("Certificates");
 const loadedCertificates = new Map<string, Certificates.Certificate>();
 
 /**
- * Returns all loaded certificates
+ * Returns all stored certificates
  */
-export function list() {
-  return Array.from(loadedCertificates.values());
+export async function list(): Promise<Array<Certificates.StoredCertificate>> {
+  const db = await Models.certificates();
+  const allCertificates = await db.findAll();
+  return allCertificates.map((cert) => cert.toJSON());
 }
 
 /**
- * Get a single certificate currently loaded in memory, if it exists
+ * Returns a single loaded certificate, the one already loaded to memory or from the database
  */
-export function find(hostname: string): Certificates.Certificate | undefined {
-  return loadedCertificates.get(hostname);
+export async function load(
+  hostname: string
+): Promise<Certificates.Certificate | undefined> {
+  if (loadedCertificates.has(hostname)) {
+    return loadedCertificates.get(hostname);
+  } else {
+    const model = await Models.certificates();
+    const cert = await model.findOne({ where: { hostname } });
+    if (cert) {
+      return loadCertificate(cert.toJSON());
+    }
+  }
 }
 
 /**
@@ -35,17 +47,19 @@ export async function renew(
   forceRenewal: boolean = false,
   numberOfTries: number = 5
 ): Promise<void> {
+  const db = await Models.certificates();
+
   // Make sure that the certificate to renew exists
-  const loadedCertificate = loadedCertificates.get(hostname);
-  if (!loadedCertificate) {
+  const existingCertificate = await db.findOne({ where: { hostname } });
+  if (!existingCertificate) {
     throw new Error(
       `No certificate exists that can be renewed for the hostname ${hostname}`
     );
   }
-  const { renewalMethod, renewWithin } = loadedCertificate;
+  const { renewalMethod, renewWithin } = existingCertificate.toJSON();
 
   // Calculate the milliseconds to certificates expiration
-  const timeToExpiration = getTimeToExpiration(loadedCertificate);
+  const timeToExpiration = getTimeToExpiration(existingCertificate.toJSON());
 
   // Stop if the certificate is not due to be renewed, and the renewal is not forced
   if (timeToExpiration > 0 && !forceRenewal) {
@@ -109,37 +123,13 @@ export async function add(
 /**
  * If found deletes the certificate for the given hostname completely
  */
-export function remove(hostname: string): void {
+export async function remove(hostname: string): Promise<void> {
   // Remove it from the in memory collection
   loadedCertificates.delete(hostname);
 
-  // Remove it from the cache
-  const cacheFilePath = Path.join(
-    CERTIFICATES_DIRECTORY,
-    `${normalizeName(hostname)}.json`
-  );
-  if (FSE.existsSync(cacheFilePath)) {
-    FSE.removeSync(cacheFilePath);
-  }
-}
-
-/**
- * Loads all the certificates from the cache to the in memory collection
- * Should be called once to make sure that all certificates are loaded
- * in memory
- * TODO: where to call? Rename!
- */
-export function bootstrap(): void {
-  FSE.readdirSync(CERTIFICATES_DIRECTORY)
-    .filter((v) => v.split(".")[0].split("-")[1] == "crt")
-    .map((v) => v.split("-")[0].replace(/\_/g, "."))
-    .map((hostname) => readCertificateFromFileSystem(hostname))
-    .filter((cert) => !!cert)
-    .forEach((cert) => {
-      if (cert) {
-        loadedCertificates.set(cert.hostname, cert);
-      }
-    });
+  // Remove it from the database
+  const model = await Models.certificates();
+  await model.destroy({ where: { hostname } });
 }
 
 /**
@@ -180,8 +170,9 @@ async function addOrRenewCertificate(
     );
   }
 
-  // Create and cache the certificate
-  const cert = createCertificate({
+  // Load the certificate when added and get the
+  // expiration date
+  const { expiresOn } = loadCertificate({
     hostname,
     certificate,
     privateKey,
@@ -189,48 +180,60 @@ async function addOrRenewCertificate(
     renewWithin,
   });
 
-  // Add it to the in-memory collection
-  loadedCertificates.set(hostname, cert);
+  // Create or update the certificate in the database
+  const db = await Models.certificates();
+  await db.upsert({
+    hostname,
+    certificate,
+    expiresOn,
+    privateKey,
+    renewalMethod,
+    renewWithin,
+  });
 }
 
 /**
- * Utility function for loading a single certificate from the file system, if it exists
+ * Utility function that load the secure context
+ * from a stored certificate object,
+ * adds it to the in-memory map and returns it
  */
-function readCertificateFromFileSystem(
-  hostname: string
-): Certificates.Certificate | undefined {
-  try {
-    logger.trace("Checking for any existing certificate on file");
-
-    const cacheFilePath = Path.join(
-      CERTIFICATES_DIRECTORY,
-      `${normalizeName(hostname)}.json`
+function loadCertificate(
+  cert: Omit<Certificates.StoredCertificate, "expiresOn">
+): Certificates.Certificate {
+  // Prevent empty/missing certificates to be loaded
+  if (!cert.privateKey || !cert.certificate) {
+    throw new Error(
+      `Tried to load an empty certificate/key for the hostname (${cert.hostname})`
     );
-
-    if (!FSE.existsSync(cacheFilePath)) {
-      logger.trace(
-        `Unable to find certificates on file for hostname ${hostname}`
-      );
-      return undefined;
-    }
-
-    const cacheFile: Certificates.CachedCertificate = JSON.parse(
-      FSE.readFileSync(cacheFilePath, {
-        encoding: "utf-8",
-        flag: "r",
-      })
-    );
-
-    logger.trace(`Found and loaded cached certificate of hostname ${hostname}`);
-
-    return createCertificate(cacheFile);
-  } catch (err) {
-    logger.error(
-      `Failed to load a certificate from the filesystem for hostname ${hostname}`,
-      err
-    );
-    return undefined;
   }
+
+  // Create the secure context used by the https SNI interface
+  const context = TLS.createSecureContext({
+    key: cert.privateKey,
+    cert: cert.certificate,
+    ca: undefined,
+  }).context;
+
+  // Use forge to extract the data from the PEM string
+  const pki = Forge.pki.certificateFromPem(
+    Array.isArray(cert.certificate) ? cert.certificate[0] : cert.certificate
+  );
+
+  // Return the loaded certificate
+  const loadedCert: Certificates.Certificate = {
+    hostname: cert.hostname,
+    secureContext: context,
+    expiresOn: pki.validity.notAfter,
+    renewalMethod: cert.renewalMethod,
+    renewWithin: cert.renewWithin,
+    commonName: pki.subject.attributes.reduce(
+      (current, attribute) =>
+        attribute.name === "commonName" ? attribute.value : current,
+      null
+    ),
+  };
+
+  return loadedCert;
 }
 
 // TODO: Old, move to daemon
@@ -244,6 +247,7 @@ function readCertificateFromFileSystem(
 //   }
 // },
 
+// FIXME: actively working here
 // TODO: Re-add, was run on asset creation
 // Add a renewal timer, an intervaled function call to create
 // new certificates before the old ones expires
@@ -276,15 +280,4 @@ async function renewAllLoadedCertificates() {
   }
 
   return shortestTimeToExpiration;
-}
-
-/**
- * Utility function to calculate the time to
- * when the given certificate should be renewed
- * before becoming invalid
- */
-function getTimeToExpiration(certificate: Certificates.Certificate): number {
-  return certificate.expiresOn
-    ? certificate.expiresOn.valueOf() - Date.now() - certificate.renewWithin
-    : 0;
 }

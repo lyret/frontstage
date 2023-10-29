@@ -261,18 +261,20 @@ declare global {
       secureContext: TLS.SecureContext;
     };
 
-    /** A certificate as stored in the file system cache as JSON */
-    type CachedCertificate = {
+    /** A certificate as stored in the database */
+    type StoredCertificate = {
       /** Hostname this certificate is valid for */
       hostname: Certificate["hostname"];
       /** Method used to renew this certificate */
       renewalMethod: Certificate["renewalMethod"];
+      /** The estimated datetime for the expiration of this certificates validity */
+      expiresOn: Certificate["expiresOn"];
       /** The time in milliseconds, before expiration that the certificate should be renewed */
       renewWithin: Certificate["renewWithin"];
       /** The PEM certificate(s) */
-      certificate: string | string[];
+      certificate: string;
       /** The PEM private key(s) */
-      privateKey: string | string[];
+      privateKey: string;
     };
   }
 
