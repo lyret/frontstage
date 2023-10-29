@@ -1,10 +1,14 @@
 import * as HTTP from "node:http";
 import * as AcmeClient from "acme-client";
 import * as Output from "../traffic/httpHandlers";
-import { createLogger } from "../messages";
+import { SharedMemoryMap, createLogger } from "../messages";
 
-/** Runtime cache of outstanding challenges to Lets Encrypt */
-const outstandingChallenges = new Map<string, string>();
+/**
+ * Shared runtime cache of outstanding challenges to Lets Encrypt
+ */
+const outstandingChallenges = new SharedMemoryMap<string, string>(
+  "letsencryptchallenges"
+);
 
 /** Logger */
 const logger = createLogger("Lets Encrypt");

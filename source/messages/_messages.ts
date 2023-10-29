@@ -33,15 +33,18 @@ export async function sendMessage<T>(topic: string, message: T) {
 }
 
 /** Closes all open broadcast channels */
-export async function cleanup() {
+export async function disconnect() {
   for (const channel of openChannels.values()) {
     await channel.close();
   }
   openChannels.clear();
 }
 
-/** Utility function that gets an open messages channel for the given topic */
-function getChannel<T>(topic: string): BroadcastChannel<T> {
+/**
+ * Gets an open messages channel for the given topic
+ * Makes sure its cached and closable
+ */
+export function getChannel<T>(topic: string): BroadcastChannel<T> {
   // Append the current build version number to the topic to avoid version conflicts
   topic = `servermanager.${topic.toLowerCase().trim()}.${BUILD_NUMBER}`;
 

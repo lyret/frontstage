@@ -1,4 +1,5 @@
 import { BroadcastChannel } from "broadcast-channel";
+import { getChannel } from "./_messages";
 
 type AnyMessageType<K, V> =
   | {
@@ -20,12 +21,9 @@ export class SharedMemoryMap<K, V> implements Map<K, V> {
   private _channel: BroadcastChannel<AnyMessageType<K, V>>;
 
   constructor(topic: string) {
-    // Append the current build version number to the topic to avoid version conflicts
-    topic = `servermanager.maps.${topic.toLowerCase().trim()}.${BUILD_NUMBER}`;
-
     // Create internal structures
     this._map = new Map();
-    this._channel = new BroadcastChannel(topic);
+    this._channel = getChannel(topic);
 
     // Listen to incoming events
     this._channel.addEventListener("message", (message) => {
