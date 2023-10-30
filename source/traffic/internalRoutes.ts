@@ -3,105 +3,52 @@ import * as NET from "node:net";
 import * as URL from "node:url";
 import * as HttpProxy from "http-proxy";
 import * as Output from "./httpHandlers";
+import { Models } from "../database";
 import { createLogger } from "../messages";
 
 /** Logger */
 const logger = createLogger("Internal Routes");
 
-/** In memory collection of registered internal routes sorted by hostname */
-const internalRoutes = new Map<string, Routes.InternalRoute>();
-
 /** Web Proxy used for forwarding to internal routes */
-let proxy: HttpProxy | null = null;
+let loadedProxy: HttpProxy | null = null;
 
 /**
- * Adds a new internal route for forwarding web requests (http, https & websocket) to a hostname
- * to the the given target
- *
- * @param hostname The hostname to route from
- * @param targetAddress The web address (hostname / url) to route requests to
- * @param targetPort (Optional) The port of the target to route redirect requests to
- * @param options (Optional) TODO: document
+ * Forward a http(s) request to a registered internal route if its available
+ * Returns true if the request was handled and false otherwise
  */
-export async function add(
-  hostname: string,
-  targetAddress: string,
-  outgoingPort: number | undefined = undefined,
-  options: Routes.Options = {}
-) {
-  // Fail if there already is target for the given hostname
-  if (internalRoutes.has(hostname)) {
-    throw new Error(
-      `The hostname "${hostname}" has already been added as a internal route`
-    );
-  }
-
-  // Make sure the protocol is included at the start of the target address
-  if (targetAddress.search(/^http[s]?\:\/\//i) === -1) {
-    targetAddress = `http://${targetAddress}`;
-  }
-
-  // Make sure the given port is included in the target address
-  if (outgoingPort) {
-    targetAddress = `${targetAddress}:${outgoingPort}`;
-  }
-
-  // Convert the string to an URL object
-  let targetUrl = new URL.URL(targetAddress);
-
-  // Make sure that all relevant information exists for routing
-  if (!targetUrl || !targetUrl.protocol || !targetUrl.host) {
-    throw new Error(
-      "Failed to create a internal route" +
-        JSON.stringify({ from: hostname, to: targetUrl })
-    );
-  }
-
-  // Add the target to the in memory collection
-  internalRoutes.set(hostname, {
-    hostname: String(targetUrl.hostname),
-    port: outgoingPort || Number(targetUrl.port),
-    secure: options.secureOutbound || targetUrl.protocol === "https:" || false,
-    options,
-  });
-
-  logger.success(
-    `Added an internal route between ${hostname} and ${targetAddress}`
-  );
-}
-
-/** Forward a http(s) request to a registered internal route */
-export function handleHTTPRequest(
+export async function handleHTTPRequest(
   hostname: string,
   req: HTTP.IncomingMessage,
   res: HTTP.ServerResponse
-): void {
-  // Find the target
-  const target = internalRoutes.get(hostname);
+): Promise<boolean> {
+  // Find the internal route
+  const db = await Models.InternalRoutes();
+  const route = (await db.findOne({ where: { hostname } }))?.toJSON();
 
   // Handle missing internal route
-  if (!target) {
-    throw new Error(`No internal route for incoming request to ${hostname}`);
+  if (!route) {
+    logger.trace(`No internal route for incoming request to ${hostname}`);
+    return false;
   }
 
-  // Make sure that the proxy is initialised
-  if (!proxy) {
-    logger.warn(`The http proxy has not been initialised`);
-    return Output.NotFound(req, res);
-  }
+  // Make sure that the proxy exists
+  const proxy = getProxy();
 
   // Host headers are passed through from the source by default
   // We may want to use the host header of the target instead
   // specifically if we have proxies behind us
   // or servers that check the host name matches their own
-  if (target.options.useTargetHostHeader) {
-    req.headers.host = target.hostname;
-  }
+  // NOTE: target host header has been removed for now
+  // if (route.useTargetHostHeader) {
+  //   req.headers.host = route.hostname;
+  // }
+  // NOTE: always localhost, see TODO below
+  const targetHostname = "localhost";
 
   // Pass the request on to the http proxy
-  const targetUrl = `${target.secure ? "https://" : "http://"}${
-    target.hostname
-  }:${target.port}/`;
+  const targetUrl = `${
+    route.secure ? "https://" : "http://"
+  }${targetHostname}:${route.port}/`;
   logger.trace(`Forwarding from ${hostname} to ${targetUrl}`);
 
   proxy.web(
@@ -109,38 +56,41 @@ export function handleHTTPRequest(
     res,
     {
       target: targetUrl,
-      secure: target.secure,
+      secure: route.secure,
     },
     (err, req, res) => {
       logger.error(
-        `Failed to forward request from ${req.headers.host} to ${target.hostname}`,
+        `Failed to forward request from ${req.headers.host} to ${route.hostname}`,
         err
       );
       return Output.NotFound(req, res);
     }
   );
+  return true;
 }
 
-/** Forward a upgrade request for websockets to an internal route */
-export function handleWebsocketUpgrade(
+/**
+ * Forward a upgrade request for websockets to an internal route if its available
+ * Returns true if the request was handled and false otherwise
+ */
+export async function handleWebsocketUpgrade(
   hostname: string,
   req: HTTP.IncomingMessage,
   socket: NET.Socket,
   head: Buffer | null
-): void {
-  // Find the target
-  const target = internalRoutes.get(hostname);
+): Promise<boolean> {
+  // Find the internal route
+  const db = await Models.InternalRoutes();
+  const route = (await db.findOne({ where: { hostname } }))?.toJSON();
 
   // Handle missing internal route
-  if (!target) {
-    throw new Error(`No internal route for incoming request to ${hostname}`);
+  if (!route) {
+    logger.trace(`No internal route for incoming request to ${hostname}`);
+    return false;
   }
 
-  // Make sure that the proxy is initialised
-  if (!proxy) {
-    logger.warn(`The http proxy has not been initialised`);
-    return Output.NotFound(req, socket);
-  }
+  // Make sure that the proxy exists
+  const proxy = getProxy();
 
   // Log any future websocket errors
   socket.on("error", (err) => {
@@ -148,9 +98,9 @@ export function handleWebsocketUpgrade(
   });
 
   // Pass the request on to the http proxy
-  const targetUrl = `${target.secure ? "https://" : "http://"}${
-    target.hostname
-  }:${target.port}/`;
+  const targetUrl = `${route.secure ? "https://" : "http://"}${
+    route.hostname
+  }:${route.port}/`;
   try {
     logger.trace(
       `Upgrading websocket request between ${hostname} and ${targetUrl}`
@@ -162,7 +112,7 @@ export function handleWebsocketUpgrade(
       head,
       {
         target: targetUrl,
-        secure: target.secure,
+        secure: route.secure,
       },
       (err, req, res) => {
         logger.error(
@@ -172,22 +122,101 @@ export function handleWebsocketUpgrade(
         return Output.NotFound(req, res);
       }
     );
+    return true;
   } catch (err) {
     logger.error(
       `Failed to upgrade websockets from ${req.headers.host} to ${targetUrl}`,
       err
     );
-    return Output.BadRequest(req, socket);
+    Output.BadRequest(req, socket);
+    return true;
   }
 }
 
 /**
- * Loads and registers all the configured internal routes to the in memory collection
- * Should be called once during initialisation
+ * Handles operations that needs to be performed on internal routes
  */
-export function bootstrap() {
-  // Initialise the proxy server
-  proxy = HttpProxy.createProxyServer({
+export async function performOperations(
+  operations: Manager.Operations["internalRoutes"]
+) {
+  const db = await Models.InternalRoutes();
+
+  // Destroy all removed entries
+  for (const route of operations.removed) {
+    await db.destroy({
+      where: { hostname: route.hostname },
+    });
+    logger.warn(
+      `Removed the internal route from ${route.hostname} to ${route.port}`
+    );
+  }
+
+  // Update all moved entries
+  for (const route of operations.moved) {
+    await db.update(route, { where: { hostname: route.hostname } });
+    logger.success(
+      `Updated the internal route from ${route.hostname} to ${route.port}`
+    );
+  }
+
+  // Add new entries
+  for (const route of operations.added) {
+    await db.create(route);
+    logger.success(
+      `Added an internal route from ${route.hostname} to ${route.port}`
+    );
+  }
+}
+
+/**
+ * Adds a new internal route for forwarding web requests (http, https & websocket) to a hostname
+ * to the the given target
+ */
+// TODO: Currently internal routes can only go to a localhost port
+// When added to the database the target address should be determined
+// also re-add support for "secure", "forward host header" and add a field
+// for internal address.
+// NOTE: Possibly Redirections and InternalRoutes can share database table,
+// as it would speed up the look-up query
+// async function add(hostname: string, outgoingPort: number) {
+//   // NOTE: this has always been hardcoded to localhost, but
+//   // to create internal routes between different local nodes
+//   // this should be changable
+//   let targetAddress = "localhost";
+//
+//   // Make sure the protocol is included at the start of the target address
+//   if (targetAddress.search(/^http[s]?\:\/\//i) === -1) {
+//     targetAddress = `http://${targetAddress}`;
+//   }
+//
+//   // Make sure the given port is included in the target address
+//   targetAddress = `${targetAddress}:${outgoingPort}`;
+//
+//   // Convert the string to an URL object
+//   let targetUrl = new URL.URL(targetAddress);
+//
+//   // Make sure that all relevant information exists for routing
+//   if (!targetUrl || !targetUrl.protocol || !targetUrl.host) {
+//     throw new Error(
+//       `Failed to create a internal route from ${hostname} to ${targetUrl}`
+//     );
+//   }
+//
+//   logger.success(
+//     `Added an internal route between ${hostname} and ${targetAddress}`
+//   );
+// }
+
+/**
+ * Loads and returns the proxy used for internal redirections if it does not already exists
+ * in-memory.
+ */
+function getProxy() {
+  if (loadedProxy) {
+    return loadedProxy;
+  }
+  // Create the proxy server
+  loadedProxy = HttpProxy.createProxyServer({
     prependPath: false,
     secure: true,
     xfwd: true,
@@ -195,7 +224,7 @@ export function bootstrap() {
   });
 
   // Make sure the proxy sets the correct host header when forwarding requests
-  proxy.on(
+  loadedProxy.on(
     "proxyReq",
     (clientRequest: HTTP.ClientRequest, req: HTTP.IncomingMessage) => {
       if (req.headers && req.headers.host) {
@@ -205,7 +234,7 @@ export function bootstrap() {
   );
 
   // Handles errors
-  proxy.on("error", (error, req, res, target) => {
+  loadedProxy.on("error", (error, req, res, target) => {
     logger.error("Routing error", { error: error, target: target });
 
     if (res.write) {
@@ -213,13 +242,6 @@ export function bootstrap() {
     }
   });
 
-  // TODO: add internal routes
-  // TODO: move to bootstrap in some way
-  // Add all routes that should be configured
-  // for (const { hostname, port } of routes) {
-  //   router.addRoute(hostname, "localhost", port, {
-  //     useTargetHostHeader: false,
-  //     secureOutbound: false,
-  //   });
-  // }
+  // Return it
+  return loadedProxy;
 }

@@ -58,11 +58,7 @@ declare global {
       /** List of all configured redirections to web addresses to forward from the public server */
       redirects: Array<Routes.Redirection>;
       /** List of all configured internal routes to forward from the public server */
-      internalRoutes: Array<{
-        label: string;
-        hostname: string;
-        port: number;
-      }>;
+      internalRoutes: Array<Routes.InternalRoute>;
       /** List of all unique application labels */
       uniqueLabels: Array<string>;
       /** List of all unique hostnames found */
@@ -76,7 +72,7 @@ declare global {
         label: string;
         port: number;
       }>;
-      /** List of all internal server manaker processes that should be managed by PM2 */
+      /** List of all internal server manager processes that should be managed by PM2 */
       internalProcesses: Array<{
         label: string;
         process: Process.Options;
@@ -271,9 +267,9 @@ declare global {
       expiresOn: Certificate["expiresOn"];
       /** The time in milliseconds, before expiration that the certificate should be renewed */
       renewWithin: Certificate["renewWithin"];
-      /** The PEM certificate(s) */
+      /** The PEM certificate */
       certificate: string;
-      /** The PEM private key(s) */
+      /** The PEM private key */
       privateKey: string;
     };
   }
@@ -283,42 +279,32 @@ declare global {
    */
   namespace Routes {
     /**
-     * Individual options when forwarding to an internal route
-     */
-    type Options = {
-      /** If true the proxy will substitute the target host name for the inbound host name of the request, i.e it is not changed */
-      useTargetHostHeader?: boolean;
-      /** If true, The proxy will use https and check the credentials on the target when forwarding */
-      secureOutbound?: boolean;
-    };
-
-    /**
      * Definition for an internal route behind the public server
      * i.e. the information needed for forwarding a request
      */
     type InternalRoute = {
+      /** The hostname of the target, excluding protocol and port */
+      hostname: string;
+      /** Label of the application configuration this internal route originated from */
+      label: string;
+      /** The port of the target */
+      port: number;
       /**
        * Indicates that this target should be secured by HTTPS when forwarding
        * effects the routing between the public server and the internal target,
        * and not the public server directly
        */
-      secure: boolean;
-      /** The hostname of the target, excluding protocol and port */
-      hostname: string;
-      /** The port of the target */
-      port: number;
-      /** Options used when forwarding to this target */
-      options: Options;
+      secure?: boolean;
     };
 
     /**
      * Definition of a redirection from a hostname to an external URL
      */
     type Redirection = {
-      /** Label of the application configuration this redirection originated from */
-      label: string;
       /** Hostname to redirect from */
       hostname: string;
+      /** Label of the application configuration this redirection originated from */
+      label: string;
       /** Target URL to redirect to */
       target: string;
     };

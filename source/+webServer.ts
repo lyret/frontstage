@@ -26,9 +26,9 @@ export async function main() {
   if (REVERSE_ROUTER_ENABLE_HTTPS) {
     // Create the https server with serverr name identification and support for resolving a TLS context depending on hostname
     const httpsServer = HTTPS.createServer({
-      SNICallback: (hostname, callback) => {
+      SNICallback: async (hostname, callback) => {
         // Get the certificate for the incoming hosthane
-        const certificate = Certificates.find(hostname);
+        const certificate = await Certificates.load(hostname);
 
         // Resolve SNI using the found certificate
         if (callback) {
@@ -36,7 +36,7 @@ export async function main() {
             callback(null, certificate.secureContext);
           } else {
             callback(
-              new Error("No certificate loaded for the hostname: " + hostname)
+              new Error("No certificate exists for the hostname: " + hostname)
             );
           }
         }
@@ -51,15 +51,17 @@ export async function main() {
 
     // Handle errors
     httpsServer.on("error", (err) => {
-      logger.error(`Request error`, err);
+      logger.error(`${err.message} (request error)`, err);
     });
     httpsServer.on("clientError", (err) => {
-      logger.error(`Client error`, err);
+      logger.error(`${err.message} (client error)`, err);
     });
 
     // Start listening
     httpsServer.on("listening", () => {
-      logger.trace(`Now listening to web requests`);
+      logger.info(
+        `Now listening to web requests on ${REVERSE_ROUTER_HOST}:${REVERSE_ROUTER_HTTPS_PORT}`
+      );
     });
     httpsServer.listen(REVERSE_ROUTER_HTTPS_PORT, REVERSE_ROUTER_HOST);
   }
@@ -89,9 +91,13 @@ export async function main() {
   // Start listening
   httpServer.on("listening", () => {
     if (REVERSE_ROUTER_ENABLE_HTTPS) {
-      logger.trace(`Redirecting unsecured web requests to HTTPS`);
+      logger.info(
+        `Redirecting unsecured web requests to HTTPS on ${REVERSE_ROUTER_HOST}:${REVERSE_ROUTER_HTTP_PORT}`
+      );
     } else {
-      logger.trace(`Now listening to web requests over HTTP`);
+      logger.info(
+        `Now listening to web requests over HTTP on ${REVERSE_ROUTER_HOST}:${REVERSE_ROUTER_HTTP_PORT}`
+      );
     }
   });
   httpServer.listen(REVERSE_ROUTER_HTTP_PORT, REVERSE_ROUTER_HOST);
@@ -100,12 +106,13 @@ export async function main() {
 /**
  * Handles an incoming HTTP/HTTPS request to the public server
  */
-function handleIncomingRequest(
+async function handleIncomingRequest(
   req: HTTP.IncomingMessage,
   res: HTTP.ServerResponse
 ) {
   try {
     const hostname = getInboundHostname(req);
+    logger.trace(`Got incoming request to ${hostname} `);
 
     // Handle if the request is a Lets Encrypt challenge
     if (Certificates.isLetsEncryptChallengeRequest(req)) {
@@ -113,14 +120,19 @@ function handleIncomingRequest(
       return Certificates.handleLetsEncryptChallengeRequest(req, res);
     }
 
-    if (Redirections.find(hostname)) {
-      return Redirections.handleHTTPRequest(hostname, req, res);
+    // Redirect the request if there is a redirection configuration
+    if (await Redirections.handleHTTPRequest(hostname, req, res)) {
+      logger.trace(`The request to ${hostname} was redirected`);
+      return;
     }
 
     // Handle the route as an internal route as default/fallback
-    return InternalRoutes.handleHTTPRequest(hostname, req, res);
+    if (await InternalRoutes.handleHTTPRequest(hostname, req, res)) {
+      logger.trace(`The request to ${hostname} was routed`);
+      return;
+    }
   } catch (err) {
-    logger.error(`Failed to handle request`, err);
+    logger.warn(`Failed to handle request`, err);
     return Output.NotFound(req, res);
   }
 }
@@ -129,7 +141,7 @@ function handleIncomingRequest(
  * Allows clients to internal routes to
  * upgrade to websocket through the public server
  */
-function upgradeWebsocketRequest(
+async function upgradeWebsocketRequest(
   req: HTTP.IncomingMessage,
   socket: NET.Socket,
   head: Buffer | null
@@ -138,7 +150,12 @@ function upgradeWebsocketRequest(
     const hostname = getInboundHostname(req);
 
     // Handle the route as an internal route
-    return InternalRoutes.handleWebsocketUpgrade(hostname, req, socket, head);
+    if (
+      await InternalRoutes.handleWebsocketUpgrade(hostname, req, socket, head)
+    ) {
+      logger.trace(`The websocket upgrade to ${hostname} was routed`);
+      return;
+    }
   } catch (err) {
     logger.error(`Failed to handle websocket upgrade request`, err);
     return Output.NotFound(req, socket);
@@ -154,6 +171,7 @@ function redirectFromHTTPtoHTTPS(
   res: HTTP.ServerResponse
 ) {
   try {
+    logger.trace("Upgrading request...");
     // Handle if the request is a Lets Encrypt challenge
     if (Certificates.isLetsEncryptChallengeRequest(req)) {
       logger.trace(`Routing LetsEncrypt challenge to ${req.url}`);
@@ -197,3 +215,6 @@ function getInboundHostname(req: HTTP.IncomingMessage): string {
 
   throw new Error("Unable to get inbound hostname");
 }
+
+// Starts the internal process
+main();

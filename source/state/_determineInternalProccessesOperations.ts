@@ -33,6 +33,9 @@ export async function determineInternalProccessesOperations(
   // The Scheduler process should be always running
   determineOp(schedulerProcess, context, () => true);
 
+  // The Web Server process should be always running
+  determineOp(webServerProcess, context, () => true);
+
   // Return the resulting operations
   return context.operations;
 }
@@ -88,5 +91,15 @@ const schedulerProcess: Manager.ApplicationsState["internalProcesses"][0] = {
     cwd: BIN_DIRECTORY,
     namespace: "manager",
     script: Path.resolve(BIN_DIRECTORY, "+scheduler.js"),
+  },
+};
+
+/** Public Web Server process options */
+const webServerProcess: Manager.ApplicationsState["internalProcesses"][0] = {
+  label: "WEBSERVER",
+  process: {
+    cwd: BIN_DIRECTORY,
+    namespace: "manager",
+    script: Path.resolve(BIN_DIRECTORY, "+webServer.js"),
   },
 };

@@ -16,7 +16,7 @@ const loadedCertificates = new Map<string, Certificates.Certificate>();
  * Returns all stored certificates
  */
 export async function list(): Promise<Array<Certificates.StoredCertificate>> {
-  const db = await Models.certificates();
+  const db = await Models.Certificates();
   const allCertificates = await db.findAll();
   return allCertificates.map((cert) => cert.toJSON());
 }
@@ -30,7 +30,7 @@ export async function load(
   if (loadedCertificates.has(hostname)) {
     return loadedCertificates.get(hostname);
   } else {
-    const model = await Models.certificates();
+    const model = await Models.Certificates();
     const cert = await model.findOne({ where: { hostname } });
     if (cert) {
       return loadCertificate(cert.toJSON());
@@ -39,15 +39,52 @@ export async function load(
 }
 
 /**
+ * Perform operations on public hostnames
+ * Makes sure that certificates exists for all unique hostnames
+ */
+export async function performOperations(
+  operations: Manager.Operations["hostnames"]
+) {
+  const db = await Models.Certificates();
+
+  // Destroy all removed entries
+  for (const entry of operations.removed) {
+    await removeCertificate(entry.hostname);
+    logger.warn(`Removed the certificate for the hostname ${entry.hostname}`);
+  }
+
+  // Update all moved entries
+  for (const entry of operations.moved) {
+    await db.update(entry, { where: { hostname: entry.hostname } });
+    logger.success(
+      `Updated the certificate configuration for ${entry.hostname}`
+    );
+  }
+
+  // Add new entries
+  for (const entry of operations.added) {
+    try {
+      await addCertificate(entry.hostname, entry.renewalMethod);
+      logger.success(`Added a new certificate for ${entry.hostname}`);
+    } catch (err) {
+      logger.error(
+        `Failed to add a new certificate for ${entry.hostname}`,
+        err
+      );
+    }
+  }
+}
+
+/**
  * Renews an existing certificate for the given hostname, with several tries. Optionally the renewal can be forced to run even before the
  * existing certificate expires
  */
-export async function renew(
+async function renewCertificate(
   hostname: string,
   forceRenewal: boolean = false,
   numberOfTries: number = 5
 ): Promise<void> {
-  const db = await Models.certificates();
+  const db = await Models.Certificates();
 
   // Make sure that the certificate to renew exists
   const existingCertificate = await db.findOne({ where: { hostname } });
@@ -83,7 +120,7 @@ export async function renew(
       );
       return new Promise((resolve) =>
         setTimeout(async () => {
-          await renew(hostname, forceRenewal, numberOfTries - 1);
+          await renewCertificate(hostname, forceRenewal, numberOfTries - 1);
           resolve();
         }, 5000)
       );
@@ -99,18 +136,15 @@ export async function renew(
 
 /**
  * Adds a new certificate
- *
- * @param hostname The hostname to create the certificate for
- * @param renewalMethod The type of certificate to generate or request
- * @param renewWithin The time in milliseconds before expiration that the certificate should be renewed
  */
-export async function add(
+async function addCertificate(
   hostname: string,
   renewalMethod?: Certificates.Certificate["renewalMethod"],
   renewWithin?: Certificates.Certificate["renewWithin"]
 ): Promise<void> {
   // Can't add an already existing certificate
-  if (!loadedCertificates.has(hostname)) {
+  const existingCertificate = await load(hostname);
+  if (existingCertificate) {
     throw new Error(
       `Can't add a certificate for the hostname ${hostname} as its already exist`
     );
@@ -123,12 +157,12 @@ export async function add(
 /**
  * If found deletes the certificate for the given hostname completely
  */
-export async function remove(hostname: string): Promise<void> {
-  // Remove it from the in memory collection
+async function removeCertificate(hostname: string): Promise<void> {
+  // Remove it from the in memory collection if it exists
   loadedCertificates.delete(hostname);
 
   // Remove it from the database
-  const model = await Models.certificates();
+  const model = await Models.Certificates();
   await model.destroy({ where: { hostname } });
 }
 
@@ -181,7 +215,7 @@ async function addOrRenewCertificate(
   });
 
   // Create or update the certificate in the database
-  const db = await Models.certificates();
+  const db = await Models.Certificates();
   await db.upsert({
     hostname,
     certificate,
@@ -270,7 +304,7 @@ async function renewAllLoadedCertificates() {
         Math.min(timeToExpiration, shortestTimeToExpiration)
       );
     }
-    await renew(certificate.hostname);
+    await renewCertificate(certificate.hostname);
     // FIXME: pure test code
     scheduleOperation<Messages.ScheduledCertificateRenewal>({
       timestamp: Date.now() + timeToExpiration,

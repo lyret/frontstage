@@ -1,6 +1,8 @@
 import * as Certificates from "./certificates";
 import * as ProcessManager from "./processes/_pm2";
 import { InternalProcesses } from "./processes";
+import * as Redirections from "./traffic/redirections";
+import * as InternalRoutes from "./traffic/internalRoutes";
 import * as State from "./state";
 import { createLogger, scheduleOperation } from "./messages";
 import * as PrivateProcesses from "./processes/_pm2";
@@ -57,7 +59,7 @@ export async function reload() {
     // FIXME: CONTINUE HERE this is where im currently working
     const state = await State.updateManagerState();
     const runners = await ProcessManager.list();
-    const certs = Certificates.list();
+    const certs = await Certificates.list();
 
     console.log("RUNNING PROCESSES");
     console.log(JSON.stringify(runners, null, 4));
@@ -67,6 +69,15 @@ export async function reload() {
     console.log(JSON.stringify(state.network, null, 4));
     console.log("CERTIFICATES");
     console.log(JSON.stringify(certs, null, 4));
+
+    console.log("Performing changes to internal routes...");
+    await InternalRoutes.performOperations(state.operations.internalRoutes);
+
+    console.log("Performing changes to redirection configurations...");
+    await Redirections.performOperations(state.operations.redirections);
+
+    console.log("Performing changes to certificate configurations...");
+    await Certificates.performOperations(state.operations.hostnames);
 
     console.log("Performing changes to internal processes...");
     await InternalProcesses.performOperations(
@@ -84,59 +95,6 @@ export async function reload() {
     //     const a = await Network.nslookup(hostname);
     //     console.log(hostname, a);
     //   }
-    //   // If redirections are needed, start a proxy server
-    //   if (!isTest && allRedirectes.length) {
-    //     // Add routes to the redirection proxy
-    //     for (const redirection of allRedirectes) {
-    //       allRoutes.push({
-    //         hostname: redirection.from,
-    //         port: REDIRECTION_PROXY_PORT,
-    //       });
-    //     }
-    //
-    //     // Output
-    //     console.log("\n> ------------------------");
-    //     console.log("> STARTING REDIRECTION PROXY...");
-    //     console.log("> ------------------------");
-    //
-    //     // Start proxy
-    //     await startRedirectionProxy(allRedirectes);
-    //   }
-    //
-    //   // Start the reverse router proxy server for all configured routes
-    //   if (!isTest) {
-    //     // Output
-    //     console.log("\n> ------------------------");
-    //     console.log("> STARTING REVERSE ROUTER");
-    //     console.log("> ------------------------");
-    //
-    //     // Start router
-    //     await startReverseRouterServer(allRoutes);
-    //   }
-    //
-    //   // Perform changes to the process ecosystem
-    //   if (!isTest) {
-    //     console.log("\n> ------------------------");
-    //     console.log("> PERFORMING PM2 CHANGES");
-    //     console.log("> ------------------------");
-    //
-    //     // Generate ecosystem file
-    //     await generateProcessEcosystem(allProcesses);
-    //
-    //     // Delete all processes removed from the configuration
-    //     await removeAppProcessesFromPM2(allProcesses);
-    //
-    //     // Reload the managed PM2 processes
-    //     await reloadPM2();
-    //   }
-    //
-    //   // End output and handling
-    //   isTest ? console.log("\n> Test completed\n\n") : console.log("\n> End\n\n");
-    // } catch (err) {
-    //   console.error("> Something went wrong...");
-    //   console.error(err);
-    // }
-    // }
   });
 }
 
