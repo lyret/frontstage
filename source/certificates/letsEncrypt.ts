@@ -1,14 +1,8 @@
 import * as HTTP from "node:http";
 import * as AcmeClient from "acme-client";
 import * as Output from "../traffic/httpHandlers";
-import { SharedMemoryMap, createLogger } from "../messages";
-
-/**
- * Shared runtime cache of outstanding challenges to Lets Encrypt
- */
-const outstandingChallenges = new SharedMemoryMap<string, string>(
-  "letsencryptchallenges"
-);
+import { Models } from "../database";
+import { createLogger } from "../messages";
 
 /** Logger */
 const logger = createLogger("Lets Encrypt");
@@ -86,11 +80,11 @@ export async function requestCertificateFromLetsEncrypt(
 
     // Update the challenge response
     token = challenge.token;
-
-    outstandingChallenges.set(
-      normalizeIndex(hostname, token),
-      keyAuthorization
-    );
+    const db = await Models.LetsEncryptChallenges();
+    db.create({
+      index: normalizeIndex(hostname, token),
+      key: keyAuthorization,
+    });
 
     // Verify the challenge
     await client.verifyChallenge(authorization, challenge);
@@ -124,7 +118,8 @@ export async function requestCertificateFromLetsEncrypt(
     throw err;
   } finally {
     // Remove the outstanding challenge
-    outstandingChallenges.delete(normalizeIndex(hostname, token));
+    const db = await Models.LetsEncryptChallenges();
+    await db.destroy({ where: { index: normalizeIndex(hostname, token) } });
   }
 }
 
@@ -145,10 +140,10 @@ export function isLetsEncryptChallengeRequest(
  * Resolves a http challenge response from the Lets Encrypt servers
  * Is used from the public server
  */
-export function handleLetsEncryptChallengeRequest(
+export async function handleLetsEncryptChallengeRequest(
   req: HTTP.IncomingMessage,
   res: HTTP.ServerResponse
-): void {
+): Promise<void> {
   // Make sure that this request actually is meant for this service
   if (!(req.url && isLetsEncryptChallengeRequest(req))) {
     logger.warn(`Got a request thats not an ACME-challenge: ${req.url}`);
@@ -181,20 +176,22 @@ export function handleLetsEncryptChallengeRequest(
     logger.warn("Got a request without an included token");
     return Output.NotFound(req, res);
   }
-
-  const key = outstandingChallenges.get(
-    normalizeIndex(req.headers.host, token)
-  );
   logger.trace(`Validating challenge for token: ${token}`);
 
+  // Find the challenge in the database
+  const db = await Models.LetsEncryptChallenges();
+  const dbEntry = await db.findOne({
+    where: { index: normalizeIndex(req.headers.host, token) },
+  });
+
   // No outstanding challenge
-  if (!key) {
+  if (!dbEntry) {
     logger.trace(`No outstanding challenge found for token: ${token}`);
     return Output.NotFound(req, res);
   }
 
   // Respond with the key corresponding to the token from the outstanding challenges
-  return Output.Ok(req, res, key);
+  return Output.Ok(req, res, dbEntry.toJSON().key);
 }
 
 /** Helper function to turn a hostname and token into a string used to index the challenges collection */

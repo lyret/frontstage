@@ -86,4 +86,22 @@ export const Models = defineModels({
       timestamps: true,
     }
   ),
+  /**
+   * Outstanding Challenges to Lets Encrypt are stored
+   * in the database while certificates are requested
+   */
+  LetsEncryptChallenges: defineModel<{ index: string; key: string }>(
+    {
+      index: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true,
+      },
+      key: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+    },
+    {}
+  ),
 });

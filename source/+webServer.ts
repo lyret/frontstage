@@ -117,7 +117,8 @@ async function handleIncomingRequest(
     // Handle if the request is a Lets Encrypt challenge
     if (Certificates.isLetsEncryptChallengeRequest(req)) {
       logger.trace(`Routing LetsEncrypt challenge to ${req.url}`);
-      return Certificates.handleLetsEncryptChallengeRequest(req, res);
+      await Certificates.handleLetsEncryptChallengeRequest(req, res);
+      return;
     }
 
     // Redirect the request if there is a redirection configuration
@@ -166,7 +167,7 @@ async function upgradeWebsocketRequest(
  * Redirect unsecured web traffic to HTTPS
  * Allows for the special case of unsecured lets encrypt challenges
  */
-function redirectFromHTTPtoHTTPS(
+async function redirectFromHTTPtoHTTPS(
   req: HTTP.IncomingMessage,
   res: HTTP.ServerResponse
 ) {
@@ -175,7 +176,8 @@ function redirectFromHTTPtoHTTPS(
     // Handle if the request is a Lets Encrypt challenge
     if (Certificates.isLetsEncryptChallengeRequest(req)) {
       logger.trace(`Routing LetsEncrypt challenge to ${req.url}`);
-      return Certificates.handleLetsEncryptChallengeRequest(req, res);
+      await Certificates.handleLetsEncryptChallengeRequest(req, res);
+      return;
     }
 
     // Set up the redirect to use the same host, path and and port as the original request
