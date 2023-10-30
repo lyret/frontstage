@@ -9,6 +9,11 @@
 - [ ] process management flow
 - [ ] state update flow
 
+## Verifiera
+
+- [ ] Skapa en droplet på Digital Ocean och skriv "deployflöde"
+- [ ] Testa Lets Encrypt på droplletet
+
 ## Körbarhet 1.0
 
 - [ ] Alla +program.ts funktioner ska finnas och fungera
