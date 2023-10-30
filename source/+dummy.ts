@@ -2,7 +2,7 @@ import { createLogger } from "./messages";
 
 // DUMMY
 // This is an internal process of the server manager, it simply outputs to the console
-// Created to test the handling of internal processes
+// Created to test the handling of internal processes during development
 
 /** Logger */
 const logger = createLogger("Dummy");

@@ -27,8 +27,8 @@ export async function determineInternalProccessesOperations(
 
   // Run the determination function for each possible internal process
 
-  // The Dummy process should be always running
-  determineOp(dummyProcess, context, () => true);
+  // The Dummy process should never be running
+  determineOp(dummyProcess, context, () => false);
 
   // The Scheduler process should be always running
   determineOp(schedulerProcess, context, () => true);
