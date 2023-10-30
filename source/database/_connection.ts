@@ -41,7 +41,7 @@ export async function connect(): Promise<Sequelize> {
     // and copy it so it becomes the new active database, prevents data
     // being destroyed from bad code and when definitions change
     const existingDatabase = FSE.readdirSync(DATABASE_DIRECTORY).filter(
-      (file) => file.includes(".sqlite")
+      (fileName) => fileName.includes(".sqlite")
     )[0];
 
     if (existingDatabase) {
@@ -52,11 +52,29 @@ export async function connect(): Promise<Sequelize> {
     }
   }
 
+  // Make sure we keep only the three most recent cached database
+  const cachedDatabasesToRemove = FSE.readdirSync(CACHE_DIRECTORY)
+    .filter((fileName) => fileName.includes(".sqlite"))
+    // Get the build nr from the file name, as the build number is
+    // a timestamp we can determine which backuped databases are
+    // the most recent and sort them correctly
+    .sort((fileNameA, fileNameB) => {
+      const datestampA = Number(fileNameA.split(".")[0]?.split("-")[1]);
+      const datestampB = Number(fileNameB.split(".")[0]?.split("-")[1]);
+      return datestampA > datestampB ? -1 : 1;
+    })
+    .filter((_, index) => index >= 3)
+    .map((fileName) => Path.resolve(CACHE_DIRECTORY, fileName));
+
+  for (const filePath of cachedDatabasesToRemove) {
+    await FSE.remove(filePath);
+  }
+
   // Connect to the database of the given name
   const connection = new Sequelize({
     dialect: "sqlite",
     storage: dbPath,
-    logging: (sql) => logger.trace(sql),
+    logging: (sql) => logger.operation(sql),
   });
   try {
     await connection.authenticate();

@@ -5,8 +5,8 @@ node_modules
 # Default output for transpiled source code
 /.bin
 
-# Default output for cache files
-/.state
+# Default output for cached files
+/.cache
 
 # Default database folder
 /.database
