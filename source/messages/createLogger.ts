@@ -2,8 +2,9 @@ import * as Colors from "colors/safe";
 
 /** Registry of available log levels */
 export const LogLevels = {
-  debug: { level: 60, color: Colors.blue, name: "Debug" },
-  trace: { level: 50, color: Colors.grey, name: "Trace" },
+  operation: { level: 70, color: Colors.grey, name: "Trace" },
+  trace: { level: 60, color: Colors.grey, name: "Trace" },
+  debug: { level: 50, color: Colors.blue, name: "Debug" },
   info: { level: 40, color: Colors.green, name: "Info" },
   success: { level: 35, color: Colors.green, name: "Success" },
   warn: { level: 30, color: Colors.yellow, name: "Warning" },
@@ -82,10 +83,12 @@ function createErrorLogFunction(
  * @param Name or Context for identifying where the logs are coming from
  */
 export function createLogger(name: string): {
-  /** Outputs debug information */
-  debug: LogFunction;
+  /** Outputs database operations information */
+  operation: LogFunction;
   /** Outputs trace information */
   trace: LogFunction;
+  /** Outputs debug information */
+  debug: LogFunction;
   /** Outputs general information */
   info: LogFunction;
   /** Outputs information for successful operations */
@@ -98,8 +101,9 @@ export function createLogger(name: string): {
   fatal: ErrorLogFunction;
 } {
   return {
-    debug: createLogFunction("debug", name),
+    operation: createLogFunction("operation", name),
     trace: createLogFunction("trace", name),
+    debug: createLogFunction("debug", name),
     info: createLogFunction("info", name),
     success: createLogFunction("success", name),
     warn: createLogFunction("warn", name),
