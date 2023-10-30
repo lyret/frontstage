@@ -3,7 +3,6 @@ import * as Forge from "node-forge";
 import { createLogger, scheduleOperation } from "../messages";
 import { generateSelfSignedCertificate } from "./_generateSelfSignedCertificate";
 import { requestCertificateFromLetsEncrypt } from "./letsEncrypt";
-import { defaultRenewalMethod, getTimeToExpiration } from "./_utilities";
 import { Models } from "../database";
 
 /** Logger */
@@ -76,62 +75,42 @@ export async function performOperations(
 }
 
 /**
- * Renews an existing certificate for the given hostname, with several tries. Optionally the renewal can be forced to run even before the
- * existing certificate expires
+ * Renews all certificates that are due for renewal
+ * and schedules a new renewal operation at the
  */
-async function renewCertificate(
-  hostname: string,
-  forceRenewal: boolean = false,
-  numberOfTries: number = 5
-): Promise<void> {
+export async function performCertificationRenewal() {
+  logger.info("Checking for certificates that needs to be renewed");
+
+  // Find all certificates in the database
   const db = await Models.Certificates();
+  const certificates = await db.findAll();
 
-  // Make sure that the certificate to renew exists
-  const existingCertificate = await db.findOne({ where: { hostname } });
-  if (!existingCertificate) {
-    throw new Error(
-      `No certificate exists that can be renewed for the hostname ${hostname}`
-    );
-  }
-  const { renewalMethod, renewWithin } = existingCertificate.toJSON();
+  // Remember the shortest expiration time among loaded certificates
+  let shortestTimeToExpiration = ONE_MONTH;
 
-  // Calculate the milliseconds to certificates expiration
-  const timeToExpiration = getTimeToExpiration(existingCertificate.toJSON());
+  // Iterate over all loaded certificates and tries to renew them
+  for (const certificate of certificates) {
+    const timeToExpiration = getTimeToExpiration(certificate.toJSON());
 
-  // Stop if the certificate is not due to be renewed, and the renewal is not forced
-  if (timeToExpiration > 0 && !forceRenewal) {
-    logger.trace(`The certificate for ${hostname} is not in need of renewal`);
-    return;
-  }
-
-  // Renewal the certificate
-  logger.info(`Renewing the certificate for "${hostname}..."`);
-
-  try {
-    await addOrRenewCertificate(hostname, renewalMethod, renewWithin);
-  } catch (err) {
-    // Retry the same renewal until the number of tries reaches zero
-    if (numberOfTries >= 0) {
-      logger.warn(
-        `Unable to renew the certificate for hostname ${hostname}, retries left: ${
-          numberOfTries - 1
-        }`,
-        err
+    // If the certificate is not due to be renewed, do not renew it - but keep the time left to expiration
+    if (timeToExpiration > 0) {
+      shortestTimeToExpiration = Math.max(
+        5000,
+        Math.min(timeToExpiration, shortestTimeToExpiration)
       );
-      return new Promise((resolve) =>
-        setTimeout(async () => {
-          await renewCertificate(hostname, forceRenewal, numberOfTries - 1);
-          resolve();
-        }, 5000)
-      );
-    } else {
-      logger.error(
-        `Failed to generate a certificate for the hostname ${hostname}, no more retries`,
-        err
-      );
-      throw err;
+    }
+    // Otherwise renew it now
+    else {
+      await renewCertificate(certificate.toJSON());
     }
   }
+
+  // Schedule a new certificate renewal in the scheduler process
+  await scheduleOperation<Messages.ScheduledCertificateRenewal>({
+    id: "certificate-renewal",
+    timestamp: Date.now() + shortestTimeToExpiration,
+  });
+  logger.success("Renewed all certificates that was due of renewal");
 }
 
 /**
@@ -164,6 +143,100 @@ async function removeCertificate(hostname: string): Promise<void> {
   // Remove it from the database
   const model = await Models.Certificates();
   await model.destroy({ where: { hostname } });
+}
+
+/**
+ * Utility function that load the secure context
+ * from a stored certificate object,
+ * adds it to the in-memory map and returns it
+ */
+function loadCertificate(
+  cert: Omit<Certificates.StoredCertificate, "expiresOn">
+): Certificates.Certificate {
+  // Prevent empty/missing certificates to be loaded
+  if (!cert.privateKey || !cert.certificate) {
+    throw new Error(
+      `Tried to load an empty certificate/key for the hostname (${cert.hostname})`
+    );
+  }
+
+  // Create the secure context used by the https SNI interface
+  const context = TLS.createSecureContext({
+    key: cert.privateKey,
+    cert: cert.certificate,
+    ca: undefined,
+  }).context;
+
+  // Use forge to extract the data from the PEM string
+  const pki = Forge.pki.certificateFromPem(
+    Array.isArray(cert.certificate) ? cert.certificate[0] : cert.certificate
+  );
+
+  // Return the loaded certificate
+  const loadedCert: Certificates.Certificate = {
+    hostname: cert.hostname,
+    secureContext: context,
+    expiresOn: pki.validity.notAfter,
+    renewalMethod: cert.renewalMethod,
+    renewWithin: cert.renewWithin,
+    commonName: pki.subject.attributes.reduce(
+      (current, attribute) =>
+        attribute.name === "commonName" ? attribute.value : current,
+      null
+    ),
+  };
+
+  return loadedCert;
+}
+
+/**
+ * Renews an existing certificate for the given hostname, with several tries. Optionally the renewal can be forced to run even before the
+ existing certificate expires
+ */
+async function renewCertificate(
+  certificate: Certificates.StoredCertificate,
+  forceRenewal: boolean = false,
+  numberOfTries: number = 5
+): Promise<void> {
+  const { hostname, renewalMethod, renewWithin } = certificate;
+
+  // Calculate the milliseconds to certificates expiration
+  const timeToExpiration = getTimeToExpiration(certificate);
+
+  // Stop if the certificate is not due to be renewed, and the renewal is not forced
+  if (timeToExpiration > 0 && !forceRenewal) {
+    logger.trace(`The certificate for ${hostname} is not in need of renewal`);
+    return;
+  }
+
+  // Renewal the certificate
+  logger.info(`Renewing the certificate for "${hostname}..."`);
+
+  try {
+    await addOrRenewCertificate(hostname, renewalMethod, renewWithin);
+  } catch (err) {
+    // Retry the same renewal until the number of tries reaches zero
+    if (numberOfTries >= 0) {
+      logger.warn(
+        `Unable to renew the certificate for hostname ${hostname}, retries left: ${
+          numberOfTries - 1
+        }`,
+        err
+      );
+      return new Promise((resolve) =>
+        setTimeout(async () => {
+          await renewCertificate(certificate, forceRenewal, numberOfTries - 1);
+          resolve();
+        }, 5000)
+      );
+    } else {
+      logger.error(
+        `Failed to generate a certificate for the hostname ${hostname}, no more retries`,
+        err
+      );
+      return;
+    }
+  }
 }
 
 /**
@@ -226,92 +299,23 @@ async function addOrRenewCertificate(
   });
 }
 
-/**
- * Utility function that load the secure context
- * from a stored certificate object,
- * adds it to the in-memory map and returns it
- */
-function loadCertificate(
-  cert: Omit<Certificates.StoredCertificate, "expiresOn">
-): Certificates.Certificate {
-  // Prevent empty/missing certificates to be loaded
-  if (!cert.privateKey || !cert.certificate) {
-    throw new Error(
-      `Tried to load an empty certificate/key for the hostname (${cert.hostname})`
-    );
+/** utility function to get the default renewal method to use in the current environment */
+function defaultRenewalMethod(): Certificates.Certificate["renewalMethod"] {
+  if (LETS_ENCRYPT_CERTIFICATES_ENABLED) {
+    return "lets-encrypt";
   }
-
-  // Create the secure context used by the https SNI interface
-  const context = TLS.createSecureContext({
-    key: cert.privateKey,
-    cert: cert.certificate,
-    ca: undefined,
-  }).context;
-
-  // Use forge to extract the data from the PEM string
-  const pki = Forge.pki.certificateFromPem(
-    Array.isArray(cert.certificate) ? cert.certificate[0] : cert.certificate
-  );
-
-  // Return the loaded certificate
-  const loadedCert: Certificates.Certificate = {
-    hostname: cert.hostname,
-    secureContext: context,
-    expiresOn: pki.validity.notAfter,
-    renewalMethod: cert.renewalMethod,
-    renewWithin: cert.renewWithin,
-    commonName: pki.subject.attributes.reduce(
-      (current, attribute) =>
-        attribute.name === "commonName" ? attribute.value : current,
-      null
-    ),
-  };
-
-  return loadedCert;
+  return "self-signed";
 }
 
-// TODO: Old, move to daemon
-// If a certificate for the hostname already exists,
-// tryadd or renew the certificate with 5 tries, do not force it
-//ensure: (hostname: string, renewalMethod: Certificate["metadata"]["renewalMethod"]) => Promise<void>;
-// ensure: async (hostname, renewalMethod) => {
-//   if (!_map.exists(hostname)) {
-//     logger.trace(`Adding or renewing a certificate for hostname: ${hostname}`);
-//     await _addOrRenewCertificate(hostname, renewalMethod, false, 5);
-//   }
-// },
-
-// FIXME: actively working here
-// TODO: Re-add, was run on asset creation
-// Add a renewal timer, an intervaled function call to create
-// new certificates before the old ones expires
-// TODO: should add job to scheduler
-// jobs should be unique
-async function renewAllLoadedCertificates() {
-  logger.info("Checking for certificates that needs to be renewed");
-
-  // Remember the shortest expiration time among loaded certificates
-  let shortestTimeToExpiration = ONE_MONTH;
-
-  // Iterate over all loaded certificates and tries to renew them
-  for (const certificate of loadedCertificates.values()) {
-    const timeToExpiration = getTimeToExpiration(certificate);
-
-    // If the certificate is not due to be renewed, do not renew it - but keep the time left to expiration
-    if (timeToExpiration > 0) {
-      shortestTimeToExpiration = Math.max(
-        5000,
-        Math.min(timeToExpiration, shortestTimeToExpiration)
-      );
-    }
-    await renewCertificate(certificate.hostname);
-    // FIXME: pure test code
-    scheduleOperation<Messages.ScheduledCertificateRenewal>({
-      timestamp: Date.now() + timeToExpiration,
-      id: certificate.hostname,
-      hostname: certificate.hostname,
-    });
-  }
-
-  return shortestTimeToExpiration;
+/**
+ * Utility function to calculate the time to
+ * when the given certificate should be renewed
+ * before becoming invalid
+ */
+function getTimeToExpiration(
+  certificate: Certificates.StoredCertificate | Certificates.Certificate
+): number {
+  return certificate.expiresOn
+    ? certificate.expiresOn.valueOf() - Date.now() - certificate.renewWithin
+    : 0;
 }

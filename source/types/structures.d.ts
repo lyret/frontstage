@@ -135,8 +135,11 @@ declare global {
      * An operation that renews the given certificate hostname
      */
     type ScheduledCertificateRenewal = ScheduledOperation<{
-      /** Hostname of the certificate to renew */
-      hostname: Certificates.Certificate["hostname"];
+      /* Only one certificate renewal operation
+       * should be scheduled at the same time,
+       * so id must be the same
+       */
+      id: "certificate-renewal";
     }>;
   }
 

@@ -83,6 +83,8 @@ export async function reload() {
     await InternalProcesses.performOperations(
       state.operations.internalProcesses
     );
+    console.log("Scheduling certificate renewal if needed...");
+    await Certificates.performCertificationRenewal();
     console.log("Done!");
 
     // TODO: new experiments

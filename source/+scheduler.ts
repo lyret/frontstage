@@ -1,3 +1,4 @@
+import * as Certificates from "./certificates";
 import { createLogger, onScheduleOperation } from "./messages";
 
 // SCHEDULER
@@ -14,7 +15,13 @@ let timeout: NodeJS.Timeout | null = null;
 let operations: Array<Messages.ScheduledOperation> = [];
 
 /** Adds an operation to the list and make sure its sorted by UNIX timestamp */
-function add(op: Messages.ScheduledOperation) {
+function addOperation(op: Messages.ScheduledOperation) {
+  // if this operation has an id, find if it already exists
+  // in the current list of  operations, and remove it
+  if (op.id) {
+    operations = operations.filter((operation) => operation.id != op.id);
+  }
+
   operations.push(op);
   operations = operations.sort((a, b) => {
     if (a.timestamp < b.timestamp) {
@@ -33,10 +40,12 @@ function add(op: Messages.ScheduledOperation) {
   }
 }
 
-/** Perform a single operation */
+/** Perform a single operation depending on the know id */
 async function performOperation(op: Messages.ScheduledOperation) {
-  console.log("PERFORMING", op);
-  // FIXME: Perform operation
+  if (op.id == "certificate-renewal") {
+    logger.info("Performing scheduled certification renewal operation", op);
+    await Certificates.performCertificationRenewal();
+  }
 }
 
 /** Run through the list of operations and re-creates the timeout object */
@@ -53,7 +62,7 @@ async function performOperations() {
   // Iterate through the array of operations
   try {
     logger.info(
-      "Performing scheduled operations, operations to perform: " +
+      "Performing scheduled operations, number of operations to perform: " +
         operations.length
     );
 
@@ -115,7 +124,7 @@ export async function main() {
   // Add an event handler that validates and adds incoming operations
   onScheduleOperation((operation) => {
     logger.trace("Received new message", operation);
-    add({
+    addOperation({
       ...operation,
       performed: false,
     });
