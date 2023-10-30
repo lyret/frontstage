@@ -73,10 +73,10 @@ export async function connect(): Promise<Sequelize> {
 /** Closes the database connection */
 export async function disconnect() {
   if (openConnection) {
-    await openConnection.close();
+    await openConnection.connectionManager.close();
+    openConnection = null;
   }
   createdModels.clear();
-  openConnection = null;
 }
 
 /**

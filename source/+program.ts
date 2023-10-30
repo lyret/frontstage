@@ -185,4 +185,7 @@ async function run(method: () => Promise<void> | void) {
 
   // Cleanup any open broadcast channels
   await PrivateMessages.disconnect();
+
+  // Force quit
+  process.exit(0);
 }
