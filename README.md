@@ -2,6 +2,13 @@
 
 ---
 
+program.mjs -rename-> launcher.mjs
+constants -move-> source
+
+---
+
+---
+
 ## Designflöden att skapa + tester
 
 - [ ] Request flow (socket, http, https)
@@ -17,6 +24,7 @@
 ## Körbarhet 1.0
 
 - [ ] Alla +program.ts funktioner ska finnas och fungera
+- [ ] Se över all loggning
 
 ## Funktioner som behövs
 
@@ -25,6 +33,10 @@
 ## Funktioner jag vill ha
 
 - [ ] Ersätta Goatcounter med inbyggd funktionalitet
+
+## Funktioner som borde finnas
+
+- [ ] Introducera randomness för lets encrypt, undvik 00.00 och hela timmar
 
 ## Cleanup
 
