@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// SERVER MANAGER PROGRAM
+// SERVER MANAGER LAUNCHER
 // This file defines the cli program with available commands used to interact
 // with the managed processes on the server
 

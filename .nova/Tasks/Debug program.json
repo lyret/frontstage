@@ -1,24 +1,22 @@
 {
-  "actions" : {
-    "build" : {
-      "postActions" : [
+  "actions": {
+    "build": {
+      "postActions": [
         {
-          "script" : "npx manager build",
-          "type" : "runScript"
+          "script": "npx manager build",
+          "type": "runScript"
         }
       ]
     }
   },
-  "buildBeforeRunning" : true,
-  "extension" : {
-    "identifier" : "panic.JavaScript",
-    "name" : "JavaScript"
+  "buildBeforeRunning": true,
+  "extension": {
+    "identifier": "panic.JavaScript",
+    "name": "JavaScript"
   },
-  "extensionTemplate" : "nodeDebug",
-  "extensionValues" : {
-    "launchArgs" : [
-      "reload"
-    ],
-    "scriptPath" : "program.mjs"
+  "extensionTemplate": "nodeDebug",
+  "extensionValues": {
+    "launchArgs": ["reload"],
+    "scriptPath": "launcher.mjs"
   }
 }

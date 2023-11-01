@@ -1,14 +1,5 @@
 # TODO:
 
----
-
-program.mjs -rename-> launcher.mjs
-constants -move-> source
-
----
-
----
-
 ## Designflöden att skapa + tester
 
 - [ ] Request flow (socket, http, https)

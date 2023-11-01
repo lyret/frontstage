@@ -1,6 +1,8 @@
 // SERVER MANAGER CONSTANTS
-// This file contains global constants that are added as global
-// variables to the source code for convenience
+// This file exports constants variables that are available globally
+// in the source code for readability and convenience, they
+// are defined for typescript in environmental.d.ts and defined
+// when running esbuild
 
 // Export the constants object
 export let constants = {};

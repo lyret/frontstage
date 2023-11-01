@@ -8,7 +8,7 @@
     "node": ">18"
   },
   "bin": {
-    "manager": "./program.mjs"
+    "manager": "./launcher.mjs"
   },
   "dependencies": {
     "@types/fs-extra": "^9.0.13",
