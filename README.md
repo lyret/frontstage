@@ -1,5 +1,13 @@
 # TODO:
 
+---
+
+quickies:
+Anrop till IP adressen bör hanteras speciellt, cert behöver inte tittas upp etc
+När Lets encrypt ändras från staging till production behöver gamla cert invalideras
+
+---
+
 ## Designflöden att skapa + tester
 
 - [ ] Request flow (socket, http, https)
@@ -9,8 +17,8 @@
 
 ## Verifiera
 
-- [ ] Skapa en droplet på Digital Ocean och skriv "deployflöde"
-- [ ] Testa Lets Encrypt på droplletet
+- [x] Skapa en droplet på Digital Ocean och skriv "deployflöde"
+- [x] Testa Lets Encrypt på droplletet
 
 ## Körbarhet 1.0
 
