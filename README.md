@@ -1,140 +1,79 @@
-# TODO:
+# Frontstage
 
----
+Frontstage serves as a foundational layer for your self-hosted web services, making it easier to self-host develop and host web based applications.
 
-quickies:
-Anrop till IP adressen bör hanteras speciellt, cert behöver inte tittas upp etc
-När Lets encrypt ändras från staging till production behöver gamla cert invalideras
+> [!WARNING]  
+> WIP: First release is pending.
 
----
+![Frontstage logotype, a circle with small people in it representing ](./assets/frontstage-logo.png)
 
-## Designflöden att skapa + tester
+Think of it as a more streamlined and opinionated alternative to running [Nginx](https://www.nginx.com) or [Apache](https://httpd.apache.org) on your server. It offers many of the same features and more with simple configuration:
 
-- [ ] Request flow (socket, http, https)
-- [ ] Lets encrypt flow + self signed flow
-- [ ] process management flow
-- [ ] state update flow
+1. Web Traffic:
 
-## Verifiera
+   - **Web Server:** Frontstage handles to all incoming web traffic and routes them internally to your applications running on the same server or on your local network. It can also host your static web content directly.
 
-- [x] Skapa en droplet på Digital Ocean och skriv "deployflöde"
-- [x] Testa Lets Encrypt på droplletet
+   - **HTTPS Termination:** HTTPS traffic is handled entirely by Frontstage, so your application do not need to worry about security in transport.
 
-## Körbarhet 1.0
+   - **Reverse Routing:** Incoming requests is handled by requested hostname, so if you have multiple domain names direct to the same server, you can route them to different running applications.
 
-- [ ] Alla +program.ts funktioner ska finnas och fungera
-- [ ] Se över all loggning
+2. Domain and Certifications:
 
-## Funktioner som behövs
+   - **ACME Client:** Frontstage manages the certification process for all encrypted web traffic, like HTTPS, by either generating self-signed certificates or requesting them from [Lets Encrypt](https://letsencrypt.org). Renewals are handled automatically.
 
-- [ ] Skaru.se behöver stöd för wilda subdomäner vilket inte alls fungerar
+   - **Network status verification:** Domains configured in Frontstage are verified to be reachable to make debugging any network issues easier.
 
-## Funktioner jag vill ha
+   - **Dynamic DNS:** If you are using [Digital Ocean](https://www.digitalocean.com) as your nameserver provider Frontstage can automatically re-route the domains you configure so that they point to your server. This is very usable in a home-server situation that can often change public IP adress.
 
-- [ ] Ersätta Goatcounter med inbyggd funktionalitet
+3. Daemonization:
 
-## Funktioner som borde finnas
+   - **Background process manager:** Replaces [Systemd](https://en.wikipedia.org/wiki/Systemd) and similar systems and handles the running, logging and automatic restarting of your self-hosted services if they should crash.
 
-- [ ] Introducera randomness för lets encrypt, undvik 00.00 och hela timmar
+4. Other features:
 
-## Cleanup
+- **Easy configuration:** All configuration is made in a single yaml file, which make it easy to overview what processes are running, which ports are used and domain names should be routed where. Frontstage verifies this file for you making mistakes nearly impossible.
 
-- [ ] Ersätt alla console.log med logger funktioner
+- **Easy to understand runtime:** The CLI interface provide many queries as to understand what both Frontstage and your hosted applications are doing, to make both management and debugging easier. The complete state of Frontstage is stored in a easily readable Sqlite database, that is automaticly backed up for you to prevent dataloss.
 
----
+- **Easy to understand source:** The source code is well documented and (tries) to follow a clear design structure based on configuration-to-operation-to-state.
 
-## Roadmap for version 2024
+## Background:
 
-- [ ] Communicate with the manager directly over ssh or other protocol
+The goal of Frontstage is making it easy to self-host any web application without needing to learn or remember a complex underlying tech stack. The design-thinking is that it should handle everything that is immediately outside the actual scope of the application, and will probably be expanded in the future with support for logging, alterts,
 
-- [ ] Support for string interpolation or tokens, to add variables in the config, like using the same port on both apps ENV or shell command and the hostname config
+It is built in a way that it should be as portable as possible, as to be able to run on any machine. It's specifically tested on virtual linux servers Raspberry Pi and MacOS.
 
-- [ ] Remove PM2 and use this program to keep other processes running
+It should be suitable if you want to run a small to medium self-hosted web stack. I use it personally for several web sites, my smart-home stack and also for some web-applications that sees minor to medium traffic load. If you are building a bigger web application that are expecting a huge amounts of traffic, you probably want something more scalable and battle-tested like ngnix.
 
-- [ ] Add runnable FTP server access
+The name _Frontstage_ refers to actions or performances that are meant for public view. Like, when you're around people and you're putting on a certain behavior 'cause you know you're being watched. It's a concept from sociology, where they talk about how people act differently when they're in public versus private. So, frontstage is basically the "public face" you put on.
 
-- [ ] General documentation
+## Getting started
 
-### Ideas
+**Security sssumptions:**
+Your server should exist and be reachable, although Frontstage will verify this for you. It's recommended that you configure a suitable _user account_ for running Frontstage and set up a firewall anywhere on your network to limit unwanted access.
 
-- [ ] Tests
+**Installation**
 
-- [ ] Cluster support
+Perform the follow steps:
 
-- [ ] Rewrite for Bun?
+- Install [Node.js & NPM](https://nodejs.org/en/download/package-manager) (find the suitable way depending on your host machine)
 
-### Avgränsningar:
+- Install PM2 with `npm i -g pm2`;
 
-- [ ] Setting the log level using the CLI requires rebuilding
+- Run `pm2 startup` and follow any instructions given.
 
-# server-test.ts
+- Clone the repository to a suitable folder on your machine.
 
-import \* as HTTP from 'node:http';
-import { Observable, Subject } from 'rxjs';
+- Run `npm ci` in the repo folder
 
-/** Options used to configure a new HTTPServer Asset \*/
-interface ServerOptions {
-/** Identifies this server _/
-name: string
-/\*\* Port to listen to _/
-port: number
-/\*_ (optional) The interface to listen on _/
-interface ? : string
-}
+- Run `cp .defaults.env .env` in the repo folder
 
-type Value = [req: HTTP.IncomingMessage | null, res: HTTP.ServerResponse | null, err: Error | null];
+- Open `.env` and configure your environment, save the file
 
-const a = (options: ServerOptions) => {
+- Run `npx manager build`
 
-    const o = {
-    	interface: 'localhost',
-    	...options
-    };
+- _Reboot_ your environment to make sure that the process manager starts up atomaticly
 
-    const server = HTTP.createServer();
-    const subject = new Subject<{ req : HTTP.IncomingMessage, res: HTTP.ServerResponse }>();
+- Verify the installation with `npx manager verify`
 
-
-
-    // Register a handler for the listening event
-    server.on('listening', () => {
-    	console.log('listening', server.address());
-    });
-    // Register a handler for the request event
-    server.on('request', (req, res) => {
-    	subject.next({ req, res });
-    });
-
-    // Register a handler for the error event
-    server.on('error', (err) => {
-    	subject.error(err);
-    });
-
-    // Register a handler for the client error event
-    server.on('clientError', (err) => {
-    	subject.error(err);
-    });
-
-    // Start listening for requests
-    server.listen(o.port, o.interface);
-
-    return subject;
-
-}
-
-const b = a({
-name: "test",
-port: 3000
-});
-
-b.subscribe({
-next: (({ req, res }) => {
-console.log("here!");
-}),
-error
-});
-b.subscribe({
-next: (({ req, res }) => {
-console.log("haa!");
-})
-});
+- Done!
