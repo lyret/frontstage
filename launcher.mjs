@@ -1,7 +1,4 @@
 #!/usr/bin/env node
-// SERVER MANAGER LAUNCHER
-// This file defines the cli program with available commands used to interact
-// with the managed processes on the server
 
 import * as Esbuild from "esbuild";
 import * as Path from "node:path";
@@ -11,7 +8,12 @@ import { program } from "commander";
 import { config } from "dotenv";
 import { parse } from "dotenv-parse";
 import { fileURLToPath } from "node:url";
-import { constants } from "./constants.mjs";
+import { constants } from "./_constants.mjs";
+import { testRuntimeEnvironment } from "./_tests.mjs";
+
+// SERVER MANAGER LAUNCHER
+// This file defines the cli program with available commands used to interact
+// with the managed processes on the server
 
 // ENVIRONMENT VARIABLES CONFIGURATION ----------
 
@@ -47,12 +49,8 @@ env["SOURCE_DIRECTORY"] = env["SOURCE_DIRECTORY"] || installationPath;
   "CACHE_DIRECTORY",
   "DATABASE_DIRECTORY",
 ].forEach((entry) => {
-  console.log(entry);
-  console.log(env[entry]);
   env[entry] = Path.resolve(installationPath, env[entry]);
-  console.log(env[entry]);
   process.env[entry] = env[entry];
-  console.log(process.env[entry]);
   if (entry.includes("DIRECTORY")) {
     FSE.ensureDirSync(env[entry]);
   } else {
@@ -160,6 +158,14 @@ program.option(
 
 // Add rebuild option
 program.option("-b, --build", "Rebuilds the source code before running");
+
+// Add verify command
+program
+  .command("verify")
+  .description("Verifies the current installation and reports any problems")
+  .action(async (opts) => {
+    await testRuntimeEnvironment();
+  });
 
 // Add Status command
 program

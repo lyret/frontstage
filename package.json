@@ -5,7 +5,9 @@
   "license": "UNLICECED",
   "private": true,
   "engines": {
-    "node": ">18"
+    "node": ">18 <=21",
+    "npm": ">=9",
+    "pm2": "5.3"
   },
   "bin": {
     "manager": "./launcher.mjs"
@@ -20,10 +22,11 @@
     "broadcast-channel": "^5.5.0",
     "colors": "^1.4.0",
     "commander": "^10.0.0",
+    "compare-versions": "^6.1.0",
     "dotenv": "^16.0.3",
     "dotenv-parse": "^1.0.1",
     "esbuild": "^0.17.16",
-    "execa": "^7.1.1",
+    "execa": "^7.2.0",
     "fast-array-diff": "^1.1.0",
     "fs-extra": "^10.1.0",
     "ftp-srv": "^4.6.2",
