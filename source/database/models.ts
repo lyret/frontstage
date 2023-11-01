@@ -14,7 +14,6 @@ export const Models = defineModels({
       label: {
         type: DataTypes.STRING,
         allowNull: false,
-        unique: true,
       },
       target: {
         type: DataTypes.STRING,
@@ -36,7 +35,6 @@ export const Models = defineModels({
       label: {
         type: DataTypes.STRING,
         allowNull: false,
-        unique: true,
       },
       port: {
         type: DataTypes.INTEGER,
