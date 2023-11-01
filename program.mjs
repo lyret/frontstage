@@ -35,17 +35,30 @@ env = { ...env, ...constants };
 // Generate a build number for when creating new builds
 env["BUILD_NUMBER"] = Date.now();
 
-// Make sure the necessary directories are available for making builds
-// and that they exist
+// Make sure the necessary directories and files
+// are available for making builds
+// and that they exist and are correctly resolved
 env["SOURCE_DIRECTORY"] = env["SOURCE_DIRECTORY"] || installationPath;
-process.env["SOURCE_DIRECTORY"] = env["SOURCE_DIRECTORY"];
-process.env["BIN_DIRECTORY"] = env["BIN_DIRECTORY"];
-process.env["CACHE_DIRECTORY"] = env["CACHE_DIRECTORY"];
-process.env["DATABASE_DIRECTORY"] = env["DATABASE_DIRECTORY"];
-FSE.ensureDir(env["SOURCE_DIRECTORY"]);
-FSE.ensureDir(env["BIN_DIRECTORY"]);
-FSE.ensureDir(env["CACHE_DIRECTORY"]);
-FSE.ensureDir(env["DATABASE_DIRECTORY"]);
+[
+  "APPS_DIRECTORY",
+  "APPS_CONFIG_FILE",
+  "SOURCE_DIRECTORY",
+  "BIN_DIRECTORY",
+  "CACHE_DIRECTORY",
+  "DATABASE_DIRECTORY",
+].forEach((entry) => {
+  console.log(entry);
+  console.log(env[entry]);
+  env[entry] = Path.resolve(installationPath, env[entry]);
+  console.log(env[entry]);
+  process.env[entry] = env[entry];
+  console.log(process.env[entry]);
+  if (entry.includes("DIRECTORY")) {
+    FSE.ensureDirSync(env[entry]);
+  } else {
+    FSE.ensureFileSync(env[entry]);
+  }
+});
 
 // Format the env object correctly for defining global variables
 // in the build file
