@@ -2,10 +2,13 @@
 // This file exports constants variables that are available globally
 // in the source code for readability and convenience, they
 // are defined for typescript in environmental.d.ts and defined
-// when running esbuild
+// in the transpiled code as pure values when running esbuild
 
 // Export the constants object
 export let constants = {};
+
+// Generate new a constant build number for when creating new builds
+constants["BUILD_NUMBER"] = Date.now();
 
 // Add constants for getting readable durations as milliseconds
 
@@ -22,6 +25,9 @@ constants["ONE_MONTH"] = constants["ONE_DAY"] * 30;
 constants["THREE_MONTHS"] = constants["ONE_MONTH"] * 3;
 
 // Add constants to reusable paths within the source directory
+
+/** Path to the directory containing the source code */
+constants["SOURCE_DIRECTORY"] = ".";
 
 /** Path to the yaml file containing the current server manager configuration */
 constants["MANAGER_CONFIG_FILE"] = "./configuration.yaml";

@@ -156,38 +156,77 @@ declare global {
    * Type definitions for configurations effecting of the server manager
    */
   namespace Configuration {
-    // TODO: Document
-    /** Configuration file for the direct manager functionality */
+    /** Configuration for the enabled server manager functionality */
     type Manager = {
+      /** Configuration options for how to handle logs from internal server manager processes */
       logging: {
+        /**
+         * The verbosity of output that should be emitted by the manager
+         * 10: Outputs on fatal exceptions
+         * 20: Also outputs on non-fatal errors
+         * 30: Also outputs warnings
+         * 40: Also outputs generally useful information from the manager processes
+         * 50: Also outputs additional trace information
+         * 60: Also outputs information useful for debugging
+         */
         level: number;
       };
+      /** Configuration options for how to handle incoming web traffic */
       web_traffic: {
+        /** enables incoming request using HTTP */
         use_http: boolean;
+        /** The port to use for incoming HTTP requests */
         http_port: number;
+        /** The network interface to to listen on for HTTP */
         http_host: string;
+        /** Enabled the manager to listen to incoming HTTPS request, will also redirect all http requests to https if enabled */
         use_https: boolean;
+        /** The port to use for incoming HTTPS requests */
         https_port: number;
+        /** The network interface to to listen on for HTTPS */
         https_host: string;
+        /**
+         * If the server manager is behind any additional routers this
+         * settings is used for reverse routing using the x-forwarded-host header,
+         * instead of the one from the previous proxy the request passed through
+         */
         use_forwarded_host: boolean;
       };
+      /** Configuration options for how to manage web encryption certificates */
       certificates: {
-        use_lets_encrypt: boolean;
-        use_self_signed_certificates: boolean;
+        /** Configuration options for enabling the creation of self signed certificates */
         self_signed_certificates: {
           country: string;
           state: string;
           locality: string;
           organization: string;
         };
-        lets_encrypt: {
-          contact_email: string;
+        /** Configuration options for enabling requesting certificates from Lets Encrypt */
+        lets_encrypt?: {
+          /**
+           * When disabled the Lets Encrypts staging servers are used instead of production
+           *
+           * If too many failed requests are made to the Lets Encrypt
+           * production servers, the account will be
+           * blocked for a period of time.
+           * Only enable using the production servers
+           * once the application server is confirmed to be reachable and
+           * requests are processed correctly
+           */
+          use_production_server: boolean;
+          /** The contact email for when registering certificates using lets encrypt */
+          contact_email?: string;
         };
       };
+      /** Configuration options for how to manage dns records */
       dns_records: {
-        use_digital_ocean: boolean;
-        token: string;
+        /** Additional configuration then enables the use of the Digital Ocean service for managing dns records */
+        digital_ocean?: {
+          /** The API token to use when communicating with Digital Ocean */
+          token?: string;
+        };
       };
+      /** Configuration options for how to manage running daemon processes of configured applications */
       daemons: {
         root_directory: string;
       };

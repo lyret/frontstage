@@ -1,3 +1,4 @@
+import { State } from "../state";
 import * as Colors from "colors/safe";
 
 /** Registry of available log levels */
@@ -30,7 +31,7 @@ function output(
   { level, color, name }: (typeof LogLevels)["debug"]
 ) {
   // Do not output anything if disabled by the configured log level
-  if (level > LOG_LEVEL) {
+  if (!State.Initialized || level > State.Manager.logging.level) {
     return;
   }
 

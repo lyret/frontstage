@@ -4,6 +4,7 @@ import { createLogger, scheduleOperation } from "../messages";
 import { generateSelfSignedCertificate } from "./_generateSelfSignedCertificate";
 import { requestCertificateFromLetsEncrypt } from "./letsEncrypt";
 import { Models } from "../database";
+import { State } from "../state";
 
 /** Logger */
 const logger = createLogger("Certificates");
@@ -301,7 +302,7 @@ async function addOrRenewCertificate(
 
 /** utility function to get the default renewal method to use in the current environment */
 function defaultRenewalMethod(): Certificates.Certificate["renewalMethod"] {
-  if (LETS_ENCRYPT_CERTIFICATES_ENABLED) {
+  if (State.Manager.certificates.lets_encrypt) {
     return "lets-encrypt";
   }
   return "self-signed";

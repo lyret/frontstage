@@ -9,6 +9,7 @@ import { reloadManagerConfig, reloadApplicationsConfig } from "./configuration";
 import * as PrivateProcesses from "./processes/_pm2";
 import * as PrivateMessages from "./messages/_messages";
 import * as PrivateDatabase from "./database/_connection";
+import { initializeState } from "./state/state";
 import { test } from "./dns/test";
 // NOTE: clean up imports after program functionality is done
 // NOTE: some private imports are made here
@@ -106,6 +107,7 @@ export async function reload() {
 export async function validate(options: { network: boolean }) {
   await run(async () => {
     await reloadManagerConfig();
+    await reloadApplicationsConfig();
     // console.log("validate");
     // await test();
   });
@@ -132,11 +134,14 @@ export async function lookup(options: {
  * as the CLI should not keep running
  */
 async function run(method: () => Promise<void> | void) {
-  // Connect to PM2
-  await PrivateProcesses.connect();
-
   // Connect to the database
   await PrivateDatabase.connect();
+
+  // Determine the current state
+  await initializeState();
+
+  // Connect to PM2
+  await PrivateProcesses.connect();
 
   // Execute the callback function
   await method();

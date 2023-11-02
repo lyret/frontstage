@@ -6,7 +6,8 @@ import * as InternalRoutes from "./traffic/internalRoutes";
 import * as Redirections from "./traffic/redirections";
 import * as Output from "./traffic/httpHandlers";
 import * as Certificates from "./certificates";
-import { createLogger } from "./messages";
+import { State } from "./state";
+import { createLogger, onState } from "./messages";
 
 // PUBLIC WEB SERVER
 // This is a subprocess of the server manager, it is loaded and runs in the process manager. It handles all incomming traffic to the server
@@ -23,8 +24,8 @@ const logger = createLogger("Public Server");
  */
 export async function main() {
   // Create a HTTPS Server if enabled
-  if (REVERSE_ROUTER_ENABLE_HTTPS) {
-    // Create the https server with serverr name identification and support for resolving a TLS context depending on hostname
+  if (State.Manager.web_traffic.use_https) {
+    // Create the https server with server name identification and support for resolving a TLS context depending on hostname
     const httpsServer = HTTPS.createServer({
       SNICallback: async (hostname, callback) => {
         // Get the certificate for the incoming hosthane
@@ -60,10 +61,13 @@ export async function main() {
     // Start listening
     httpsServer.on("listening", () => {
       logger.info(
-        `Now listening to web requests on ${REVERSE_ROUTER_HOST}:${REVERSE_ROUTER_HTTPS_PORT}`
+        `Now listening to web requests on ${State.Manager.web_traffic.https_host}:${State.Manager.web_traffic.https_port}`
       );
     });
-    httpsServer.listen(REVERSE_ROUTER_HTTPS_PORT, REVERSE_ROUTER_HOST);
+    httpsServer.listen(
+      State.Manager.web_traffic.https_port,
+      State.Manager.web_traffic.https_host
+    );
   }
 
   // Create a server for handling incoming unsecured requests, if HTTPS is enabled, the http server will
@@ -72,7 +76,7 @@ export async function main() {
 
   httpServer.on(
     "request",
-    REVERSE_ROUTER_ENABLE_HTTPS
+    State.Manager.web_traffic.use_https
       ? redirectFromHTTPtoHTTPS
       : handleIncomingRequest
   );
@@ -90,17 +94,20 @@ export async function main() {
 
   // Start listening
   httpServer.on("listening", () => {
-    if (REVERSE_ROUTER_ENABLE_HTTPS) {
+    if (State.Manager.web_traffic.use_https) {
       logger.info(
-        `Redirecting unsecured web requests to HTTPS on ${REVERSE_ROUTER_HOST}:${REVERSE_ROUTER_HTTP_PORT}`
+        `Redirecting unsecured web requests to HTTPS on ${State.Manager.web_traffic.http_host}:${State.Manager.web_traffic.http_port}`
       );
     } else {
       logger.info(
-        `Now listening to web requests over HTTP on ${REVERSE_ROUTER_HOST}:${REVERSE_ROUTER_HTTP_PORT}`
+        `Now listening to web requests over HTTP on ${State.Manager.web_traffic.http_host}:${State.Manager.web_traffic.http_port}`
       );
     }
   });
-  httpServer.listen(REVERSE_ROUTER_HTTP_PORT, REVERSE_ROUTER_HOST);
+  httpServer.listen(
+    State.Manager.web_traffic.http_port,
+    State.Manager.web_traffic.http_host
+  );
 }
 
 /**
@@ -182,7 +189,7 @@ async function redirectFromHTTPtoHTTPS(
 
     // Set up the redirect to use the same host, path and and port as the original request
     const targetUrl = req.url || "/";
-    const targetPort = REVERSE_ROUTER_HTTPS_PORT;
+    const targetPort = State.Manager.web_traffic.https_port;
     const targetHostname =
       getInboundHostname(req) + (targetPort ? ":" + targetPort : "");
     const targetHref =
@@ -199,7 +206,7 @@ async function redirectFromHTTPtoHTTPS(
 
 /** Utility method for getting the hostname from an incoming request */
 function getInboundHostname(req: HTTP.IncomingMessage): string {
-  if (REVERSE_ROUTER_PREFER_FORWARDED_HOST) {
+  if (State.Manager.web_traffic.use_forwarded_host) {
     const forwardedHost = req.headers["x-forwarded-host"];
 
     if (Array.isArray(forwardedHost)) {

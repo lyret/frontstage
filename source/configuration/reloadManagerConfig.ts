@@ -105,8 +105,6 @@ const managerConfigurationSchema = z
       .default({}),
     certificates: z
       .object({
-        use_lets_encrypt: z.boolean().default(false),
-        use_self_signed_certificates: z.boolean().default(false),
         self_signed_certificates: z
           .object({
             country: z.string().default("Milkyway Galaxy"),
@@ -115,21 +113,28 @@ const managerConfigurationSchema = z
             organization: z.string().default("Megadodo Publications"),
           })
           .strict()
-          .default({})
-          .nullish(),
+          .nullish()
+          .default(null),
         lets_encrypt: z
           .object({
-            contact_email: z.string(),
+            use_production_server: z.boolean().default(false),
+            contact_email: z.string().nullish(),
           })
           .strict()
-          .nullish(),
+          .nullish()
+          .default(null),
       })
       .strict()
       .default({}),
     dns_records: z
       .object({
-        use_digital_ocean: z.boolean().default(false),
-        token: z.string().nullish(),
+        digital_ocean: z
+          .object({
+            token: z.string().nullish(),
+          })
+          .strict()
+          .nullable()
+          .default(null),
       })
       .strict()
       .default({}),

@@ -3,6 +3,7 @@ import * as AcmeClient from "acme-client";
 import * as Output from "../traffic/httpHandlers";
 import { Models } from "../database";
 import { createLogger } from "../messages";
+import { State } from "../state";
 
 /** Logger */
 const logger = createLogger("Lets Encrypt");
@@ -19,10 +20,10 @@ export async function requestCertificateFromLetsEncrypt(
   let token = "";
 
   // Make sure that certificates from Lets Encrypt are enabled and that the necessary information is set
-  if (!LETS_ENCRYPT_CERTIFICATES_ENABLED) {
+  if (!State.Manager.certificates.lets_encrypt) {
     logger.error("Not enabled, can't request certificate");
     throw new Error("Lets encrypt certificates are not enabled");
-  } else if (!LETS_ENCRYPT_CERTIFICATES_EMAIL) {
+  } else if (!State.Manager.certificates.lets_encrypt.contact_email) {
     logger.error("Missing neccesary information for requesting a certificate");
     throw new Error("Lets Encrypt certificates information is missing");
   } else {
@@ -33,11 +34,15 @@ export async function requestCertificateFromLetsEncrypt(
     // Determine what Lets Encrypt directory (server) to use
     const directoryUrl =
       AcmeClient.directory.letsencrypt[
-        LETS_ENCRYPT_CERTIFICATES_PRODUCTION ? "production" : "staging"
+        State.Manager.certificates.lets_encrypt.use_production_server
+          ? "production"
+          : "staging"
       ];
     logger.info(
       `Using the ${
-        LETS_ENCRYPT_CERTIFICATES_PRODUCTION ? "production" : "staging"
+        State.Manager.certificates.lets_encrypt.use_production_server
+          ? "production"
+          : "staging"
       } server`
     );
 
@@ -53,7 +58,9 @@ export async function requestCertificateFromLetsEncrypt(
     // Create the account on Let's Encrypt
     await client.createAccount({
       termsOfServiceAgreed: true,
-      contact: ["mailto:" + LETS_ENCRYPT_CERTIFICATES_EMAIL],
+      contact: [
+        "mailto:" + State.Manager.certificates.lets_encrypt.contact_email,
+      ],
     });
 
     // Create the order on Let's Encrypt
@@ -130,7 +137,7 @@ export async function requestCertificateFromLetsEncrypt(
 export function isLetsEncryptChallengeRequest(
   req: HTTP.IncomingMessage
 ): boolean {
-  if (!LETS_ENCRYPT_CERTIFICATES_ENABLED) {
+  if (!State.Manager.certificates.lets_encrypt) {
     return false;
   }
   return /^\/.well-known\/acme-challenge\//.test(req.url || "/");

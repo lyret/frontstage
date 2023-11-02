@@ -1,5 +1,6 @@
 import * as Forge from "node-forge";
 import { createLogger } from "../messages";
+import { State } from "../state";
 
 /** Logger */
 const logger = createLogger("Self Signed Certificate");
@@ -12,14 +13,14 @@ export function generateSelfSignedCertificate(
   hostname: string
 ): [certificate: string, privateKey: string] {
   // Make sure that self-signed certificates are enabled and that the necessary information is set
-  if (!SELF_SIGN_CERTIFICATES_ENABLED) {
+  if (!State.Manager.certificates.self_signed_certificates) {
     logger.error("Not enabled, can't generate certificate");
     throw new Error("Self signed certificates are not enabled");
   } else if (
-    !SELF_SIGN_CERTIFICATES_COUNTRY ||
-    !SELF_SIGN_CERTIFICATES_STATE ||
-    !SELF_SIGN_CERTIFICATES_LOCALITY ||
-    !SELF_SIGN_CERTIFICATES_ORGANIZATION
+    !State.Manager.certificates.self_signed_certificates.country ||
+    !State.Manager.certificates.self_signed_certificates.state ||
+    !State.Manager.certificates.self_signed_certificates.locality ||
+    !State.Manager.certificates.self_signed_certificates.organization
   ) {
     logger.error("Missing neccesary information for generating certificate");
     throw new Error("Self signed certificates information is missing");
@@ -38,23 +39,23 @@ export function generateSelfSignedCertificate(
     },
     {
       name: "countryName",
-      value: SELF_SIGN_CERTIFICATES_COUNTRY,
+      value: State.Manager.certificates.self_signed_certificates.country,
     },
     {
       shortName: "ST",
-      value: SELF_SIGN_CERTIFICATES_STATE,
+      value: State.Manager.certificates.self_signed_certificates.state,
     },
     {
       name: "localityName",
-      value: SELF_SIGN_CERTIFICATES_LOCALITY,
+      value: State.Manager.certificates.self_signed_certificates.locality,
     },
     {
       name: "organizationName",
-      value: SELF_SIGN_CERTIFICATES_ORGANIZATION,
+      value: State.Manager.certificates.self_signed_certificates.organization,
     },
     {
       shortName: "OU",
-      value: SELF_SIGN_CERTIFICATES_ORGANIZATION,
+      value: State.Manager.certificates.self_signed_certificates.organization,
     },
   ];
 

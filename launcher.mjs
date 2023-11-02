@@ -5,8 +5,6 @@ import * as Path from "node:path";
 import * as FSE from "fs-extra";
 import * as FS from "fs/promises";
 import { program } from "commander";
-import { config } from "dotenv";
-import { parse } from "dotenv-parse";
 import { fileURLToPath } from "node:url";
 import { constants } from "./_constants.mjs";
 import { testRuntimeEnvironment } from "./_tests.mjs";
@@ -20,51 +18,24 @@ import { testRuntimeEnvironment } from "./_tests.mjs";
 /** The path to the directory of this program file */
 const installationPath = Path.dirname(fileURLToPath(import.meta.url));
 
-// Add global variables from .defaults.env and .env files
-const { parsed: defaultEnvVariables } = config({
-  override: true,
-  path: Path.resolve(installationPath, ".defaults.env"),
-});
-const { parsed: customizedEnvVariables } = config({
-  override: true,
-  path: Path.resolve(installationPath, ".env"),
-});
-let env = parse({ ...defaultEnvVariables, ...customizedEnvVariables });
-
-// Add global variables from the imported constants
-env = { ...env, ...constants };
-
-// Generate a build number for when creating new builds
-env["BUILD_NUMBER"] = Date.now();
-
-// Make sure the necessary directories and files
-// are available for making builds
-// and that they exist and are correctly resolved
-env["SOURCE_DIRECTORY"] = env["SOURCE_DIRECTORY"] || installationPath;
-[
-  "MANAGER_CONFIG_FILE",
-  "APPS_CONFIG_FILE",
-  "SOURCE_DIRECTORY",
-  "BIN_DIRECTORY",
-  "CACHE_DIRECTORY",
-  "DATABASE_DIRECTORY",
-].forEach((entry) => {
-  env[entry] = Path.resolve(installationPath, env[entry]);
-  process.env[entry] = env[entry];
-  if (entry.includes("DIRECTORY")) {
-    FSE.ensureDirSync(env[entry]);
-  } else {
-    FSE.ensureFileSync(env[entry]);
+// Format the constants object correctly for defining global variables
+// in the build file and make sure the necessary directories and files
+// are available for making builds and that are correctly resolved
+// from the executing pwd directory
+for (let key of Object.keys(constants)) {
+  process.env[key] = constants[key];
+  if (key.includes("DIRECTORY")) {
+    constants[key] = Path.resolve(installationPath, constants[key]);
+    FSE.ensureDirSync(constants[key]);
+  } else if (key.includes("FILE")) {
+    constants[key] = Path.resolve(installationPath, constants[key]);
+    FSE.ensureFileSync(constants[key]);
   }
-});
 
-// Format the env object correctly for defining global variables
-// in the build file
-for (let key of Object.keys(env)) {
-  if (typeof env[key] == "string") {
-    env[key] = `"${env[key]}"`;
+  if (typeof constants[key] == "string") {
+    constants[key] = `"${constants[key]}"`;
   } else {
-    env[key] = `${env[key]}`;
+    constants[key] = `${constants[key]}`;
   }
 }
 
@@ -116,7 +87,7 @@ async function createNewBuilds() {
     entryPoints,
     bundle: true,
     sourcemap: true, // TODO: only needed when developing
-    define: env,
+    define: constants,
     outdir: Path.resolve(process.env["BIN_DIRECTORY"]),
   };
   const result = await Esbuild.build(buildOptions);

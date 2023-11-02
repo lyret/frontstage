@@ -169,11 +169,15 @@ const applicationConfigurationSchema = ze
       // error handling more detailed as the label for the
       // application that creates the issue can be known
       .array(z.any())
-      .nonempty()
+      .nullable()
       // Make sure that the array contains valid application
       // configurations, add the apps label to any issue found and
       // abort
       .transform((dataArray, ctx) => {
+        // Null is accepted
+        if (!dataArray) {
+          dataArray = [];
+        }
         return dataArray.map((data, arrayIndex) => {
           const res = applicationSchema.safeParse(data);
           if (!res.success) {
