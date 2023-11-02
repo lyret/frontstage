@@ -46,6 +46,11 @@ declare global {
    */
   var REVERSE_ROUTER_PREFER_FORWARDED_HOST: boolean;
 
+  // DIGITAL OCEAN
+
+  var DIGITAL_OCEAN_DNS_MANGEMENT_ENABLED: boolean;
+  var DIGITAL_OCEAN_TOKEN: string;
+
   // LETS ENCRYPT
 
   /**

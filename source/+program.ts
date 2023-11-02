@@ -4,10 +4,11 @@ import { InternalProcesses } from "./processes";
 import * as Redirections from "./traffic/redirections";
 import * as InternalRoutes from "./traffic/internalRoutes";
 import * as State from "./state";
-import { createLogger, scheduleOperation } from "./messages";
+import { createLogger } from "./messages";
 import * as PrivateProcesses from "./processes/_pm2";
 import * as PrivateMessages from "./messages/_messages";
 import * as PrivateDatabase from "./database/_connection";
+import { test } from "./dns/test";
 // NOTE: clean up imports after program functionality is done
 // NOTE: some private imports are made here
 
@@ -102,8 +103,9 @@ export async function reload() {
 
 /** Checks if the current app config file is valid */
 export async function validate(options: { network: boolean }) {
-  await run(() => {
+  await run(async () => {
     console.log("validate");
+    await test();
   });
 }
 

@@ -2,9 +2,14 @@
 
 ---
 
+BUGG: endast 1 redirection lades till på servern
+
 quickies:
 Anrop till IP adressen bör hanteras speciellt, cert behöver inte tittas upp etc
 När Lets encrypt ändras från staging till production behöver gamla cert invalideras
+
+Gör om .env till yaml
+Gör om state till sqlite
 
 ---
 
@@ -14,11 +19,6 @@ När Lets encrypt ändras från staging till production behöver gamla cert inva
 - [ ] Lets encrypt flow + self signed flow
 - [ ] process management flow
 - [ ] state update flow
-
-## Verifiera
-
-- [x] Skapa en droplet på Digital Ocean och skriv "deployflöde"
-- [x] Testa Lets Encrypt på droplletet
 
 ## Körbarhet 1.0
 
@@ -32,12 +32,17 @@ När Lets encrypt ändras från staging till production behöver gamla cert inva
 ## Funktioner jag vill ha
 
 - [ ] Ersätta Goatcounter med inbyggd funktionalitet
+- [ ] SSH stöd
 
 ## Funktioner som borde finnas
 
 - [ ] Introducera randomness för lets encrypt, undvik 00.00 och hela timmar
 
 ## Cleanup
+
+- [ ] Ersätt alla console.log med logger funktioner
+
+## Dokumentation
 
 - [ ] Ersätt alla console.log med logger funktioner
 
