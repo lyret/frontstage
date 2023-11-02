@@ -14,8 +14,8 @@ node_modules
 # Environment variables
 .env
 
-# Default app directory
-/apps
-
-# Configuration file
+# Manager Configuration file
 configuration.yaml
+
+# Applications Configuration file
+applications.yaml

@@ -1,7 +1,7 @@
 import { DataTypes } from "sequelize";
 import { defineModels, defineModel } from "./_connection";
 
-/** The defined database Models */
+/** The defined database models */
 export const Models = defineModels({
   /** Redirections */
   Redirections: defineModel<Routes.Redirection>(
@@ -50,7 +50,7 @@ export const Models = defineModels({
       timestamps: true,
     }
   ),
-  /** Stored Certificates */
+  /** Certificates */
   Certificates: defineModel<Certificates.StoredCertificate>(
     {
       hostname: {
@@ -77,6 +77,26 @@ export const Models = defineModels({
       },
       privateKey: {
         type: DataTypes.TEXT,
+        allowNull: false,
+      },
+    },
+    {
+      timestamps: true,
+    }
+  ),
+  /**
+   * State objects are stored as JSON blobs and accessible from all
+   * internal processes
+   */
+  StateObjects: defineModel<{ index: string; state: Object }>(
+    {
+      index: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true,
+      },
+      state: {
+        type: DataTypes.JSON,
         allowNull: false,
       },
     },

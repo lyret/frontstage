@@ -5,6 +5,7 @@ import * as Redirections from "./traffic/redirections";
 import * as InternalRoutes from "./traffic/internalRoutes";
 import * as State from "./state";
 import { createLogger } from "./messages";
+import { reloadManagerConfig, reloadApplicationsConfig } from "./configuration";
 import * as PrivateProcesses from "./processes/_pm2";
 import * as PrivateMessages from "./messages/_messages";
 import * as PrivateDatabase from "./database/_connection";
@@ -104,8 +105,9 @@ export async function reload() {
 /** Checks if the current app config file is valid */
 export async function validate(options: { network: boolean }) {
   await run(async () => {
-    console.log("validate");
-    await test();
+    await reloadManagerConfig();
+    // console.log("validate");
+    // await test();
   });
 }
 

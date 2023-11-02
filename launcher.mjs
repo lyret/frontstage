@@ -42,7 +42,7 @@ env["BUILD_NUMBER"] = Date.now();
 // and that they exist and are correctly resolved
 env["SOURCE_DIRECTORY"] = env["SOURCE_DIRECTORY"] || installationPath;
 [
-  "APPS_DIRECTORY",
+  "MANAGER_CONFIG_FILE",
   "APPS_CONFIG_FILE",
   "SOURCE_DIRECTORY",
   "BIN_DIRECTORY",

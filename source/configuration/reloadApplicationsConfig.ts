@@ -1,5 +1,54 @@
+import * as FS from "node:fs";
 import * as Yaml from "yaml";
 import { z } from "zod";
+import { updateState } from "../messages";
+
+/**
+ * Reloads the applications configuration from the configuration file
+ * and updates its current state in the database
+ */
+export async function reloadApplicationsConfig(): Promise<void> {
+  // Read the current application configuration file
+  if (!FS.existsSync(APPS_CONFIG_FILE)) {
+    throw new Error(
+      "The app configuration file does not exist at " + APPS_CONFIG_FILE
+    );
+  }
+  const contents = FS.readFileSync(APPS_CONFIG_FILE, "utf-8");
+
+  // Parse and validate the configuration
+  const validationResults = applicationConfigurationSchema.safeParse(contents);
+
+  // Output any problems with the configuration and raise an error
+  if (!validationResults.success) {
+    console.error(`There are errors in the application configuration file:`);
+    console.error(`Fix the following errors:\n`);
+
+    // Print each issue, transform the path to make it readable
+    const issues = validationResults.error.issues;
+    for (const issue of issues) {
+      const path = issue.path
+        .map((subpath) => {
+          if (!Number.isNaN(Number(subpath))) {
+            return "row " + subpath;
+          }
+          return subpath;
+        })
+        .join(", ");
+      console.error(`  ${path}: ${issue.message}`);
+    }
+    console.error("");
+
+    // Raise the problem
+    throw new Error("The application configuration file is invalid");
+  }
+
+  // Update the configuration state in the database and running internal processes
+  await updateState(
+    "application_configuration",
+    validationResults.data as Array<Configuration.Application>
+  );
+}
 
 /** Extended validation methods */
 const ze = {
@@ -206,40 +255,3 @@ const applicationConfigurationSchema = ze
       })
   )
   .transform((config) => config as Array<Configuration.Application>);
-
-/**
- * Validates the given text contents for a valid YAML configuration
- * of applications and returns it as a JSON object
- */
-export function validateAppConfig(
-  contents: string
-): Array<Configuration.Application> {
-  // Parse and validate the configuration
-  const results = applicationConfigurationSchema.safeParse(contents);
-
-  // Output any problems with the configuration and raise an error
-  if (!results.success) {
-    console.error(`There are errors in the configuration file:`);
-    console.error(`Fix the following errors:\n`);
-
-    // Print each issue, transform the path to make it readable
-    const issues = results.error.issues;
-    for (const issue of issues) {
-      const path = issue.path
-        .map((subpath) => {
-          if (!Number.isNaN(Number(subpath))) {
-            return "row " + subpath;
-          }
-          return subpath;
-        })
-        .join(", ");
-      console.error(`  ${path}: ${issue.message}`);
-    }
-    console.error("");
-
-    // Raise the problem
-    throw new Error("The app configuration file is invalid");
-  }
-
-  return results.data;
-}

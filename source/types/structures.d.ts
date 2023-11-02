@@ -5,6 +5,15 @@ export {};
  * used throughout the server manager
  */
 declare global {
+  // TODO: where should states be? Name?
+  // TODO: Document
+  namespace States {
+    type States = {
+      manager_configuration: Configuration.Manager;
+      application_configuration: Array<Configuration.Application>;
+    };
+  }
+
   /**
    * Type definitions for the internal state
    * of the server manager
@@ -144,11 +153,48 @@ declare global {
   }
 
   /**
-   * Type definitions for configuration of the server manager
+   * Type definitions for configurations effecting of the server manager
    */
   namespace Configuration {
+    // TODO: Document
+    /** Configuration file for the direct manager functionality */
+    type Manager = {
+      logging: {
+        level: number;
+      };
+      web_traffic: {
+        use_http: boolean;
+        http_port: number;
+        http_host: string;
+        use_https: boolean;
+        https_port: number;
+        https_host: string;
+        use_forwarded_host: boolean;
+      };
+      certificates: {
+        use_lets_encrypt: boolean;
+        use_self_signed_certificates: boolean;
+        self_signed_certificates: {
+          country: string;
+          state: string;
+          locality: string;
+          organization: string;
+        };
+        lets_encrypt: {
+          contact_email: string;
+        };
+      };
+      dns_records: {
+        use_digital_ocean: boolean;
+        token: string;
+      };
+      daemons: {
+        root_directory: string;
+      };
+    };
+
     /**
-     * Application configuration
+     * Configuration file for a managed application
      */
     type Application = {
       /** Unique identifying name for this application */

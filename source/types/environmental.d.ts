@@ -81,9 +81,10 @@ declare global {
 
   // PATHS
 
+  var MANAGER_CONFIG_FILE: string;
+  var APPS_CONFIG_FILE: string;
   var SOURCE_DIRECTORY: string;
   var APPS_DIRECTORY: string;
-  var APPS_CONFIG_FILE: string;
   var BIN_DIRECTORY: string;
   var DATABASE_DIRECTORY: string;
   var CACHE_DIRECTORY: string;
