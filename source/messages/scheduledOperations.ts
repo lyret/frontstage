@@ -17,7 +17,7 @@ export async function scheduleOperation<
 /**
  * Listen to incoming scheduled operations
  */
-export async function onScheduleOperation(
+export async function onScheduledOperation(
   handler: MessageHandler<MessageType>
 ) {
   return listenToMessages("scheduled.operation", handler);

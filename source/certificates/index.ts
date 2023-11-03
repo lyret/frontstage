@@ -1,4 +1,4 @@
-export * from "./certificates";
+export * as Certificates from "./certificates";
 export {
   handleLetsEncryptChallengeRequest,
   isLetsEncryptChallengeRequest,

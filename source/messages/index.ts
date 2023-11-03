@@ -1,3 +1,3 @@
-export * from "./createLogger";
-export * from "./scheduleOperation";
-export * from "./updateState";
+export * from "./logger";
+export * from "./scheduledOperations";
+export * from "./storedConfigurations";

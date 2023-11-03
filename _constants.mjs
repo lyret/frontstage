@@ -24,6 +24,14 @@ constants["ONE_MONTH"] = constants["ONE_DAY"] * 30;
 /** Three months in milliseconds */
 constants["THREE_MONTHS"] = constants["ONE_MONTH"] * 3;
 
+// Add constants for namespaces used for differencing internal and application daemons
+
+/** Daemon namespace for internal processes */
+constants["APP_DAEMON_NAMESPACE"] = "application";
+
+/** Daemon namespace for application processes */
+constants["MANAGER_DAEMON_NAMESPACE"] = "manager";
+
 // Add constants to reusable paths within the source directory
 
 /** Path to the directory containing the source code */

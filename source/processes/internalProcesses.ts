@@ -1,3 +1,4 @@
+import * as Path from "node:path";
 import * as ProcessManager from "./_pm2";
 
 /**
@@ -5,7 +6,7 @@ import * as ProcessManager from "./_pm2";
  */
 export async function list() {
   const runningInternalProcesses = (await ProcessManager.list()).filter(
-    (proc) => proc.namespace == "manager"
+    (proc) => proc.namespace == MANAGER_DAEMON_NAMESPACE
   );
   return runningInternalProcesses;
 }
@@ -15,7 +16,7 @@ export async function list() {
  * processes
  */
 export async function performOperations(
-  operations: Manager.Operations["internalProcesses"]
+  operations: State.Operations["internalProcesses"]
 ) {
   // Stop and remove processes that should not be running anymore
   for (const process of operations.remove) {
@@ -36,3 +37,35 @@ export async function performOperations(
   // so that PM2 can resurrect them when restarted
   await ProcessManager.dump();
 }
+
+// AVAILABLE INTERNAL PROCESSES
+
+/** Dummy process options */
+export const Dummy: State.Operations["internalProcesses"]["start"][0] = {
+  label: "DUMMY",
+  process: {
+    namespace: MANAGER_DAEMON_NAMESPACE,
+    cwd: BIN_DIRECTORY,
+    script: Path.resolve(BIN_DIRECTORY, "+dummy.js"),
+  },
+};
+
+/** Scheduler process options */
+export const Scheduler: State.Operations["internalProcesses"]["start"][0] = {
+  label: "SCHEDULER",
+  process: {
+    namespace: MANAGER_DAEMON_NAMESPACE,
+    cwd: BIN_DIRECTORY,
+    script: Path.resolve(BIN_DIRECTORY, "+scheduler.js"),
+  },
+};
+
+/** Public Web Server process options */
+export const WebServer: State.Operations["internalProcesses"]["start"][0] = {
+  label: "WEBSERVER",
+  process: {
+    namespace: MANAGER_DAEMON_NAMESPACE,
+    cwd: BIN_DIRECTORY,
+    script: Path.resolve(BIN_DIRECTORY, "+webServer.js"),
+  },
+};

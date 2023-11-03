@@ -44,7 +44,7 @@ for (let key of Object.keys(constants)) {
 /**
  * Imports the existing build from the binary directory and executes the given method name
  */
-async function importAndRun(methodName, ...methodArguments) {
+async function importAndRun(methodName, options) {
   // Rebuild the source code if the build option was given
   const { build } = program.opts();
   if (build) {
@@ -56,7 +56,7 @@ async function importAndRun(methodName, ...methodArguments) {
   try {
     const module = await import(latestBuild);
     try {
-      await module[methodName](...methodArguments);
+      await module[methodName]({ ...options, ...program.opts() });
     } catch (err) {
       console.error(`Failed to execute "${methodName}"`);
       console.error(err);
@@ -99,42 +99,23 @@ async function createNewBuilds() {
 program
   .name("manager")
   .description(
-    "Manages all routing, proxying and running of application processes on a server, the goal is to be a portable swiss-army knife for self-hosting"
+    "A foundational layer for your self-hosted web services, making it easy to develop and host your web based applications"
   );
-
-// Add option for setting the current Log Level to something other than
-// whats stated in .env
-program.option(
-  "-ll, --log-level <value>",
-  "Override the current log level set in .env, value should be between 0 and 100. Requires the source code to be rebuiled",
-  async (value) => {
-    if (!Number.isNaN(Number(value))) {
-      env["LOG_LEVEL"] = `${value}`;
-    }
-  }
-);
-
-// Add Environment Inspection option
-program.option(
-  "-e, --env",
-  "Prints the current environmental variables set before continuing",
-  async () => {
-    let output = "\nCurrent environment:\n\n";
-    for (const key of Object.keys(env)) {
-      output += key + ": " + env[key] + "\n";
-    }
-    console.log(output);
-  }
-);
 
 // Add rebuild option
 program.option("-b, --build", "Rebuilds the source code before running");
+
+// Add reconfigure option
+program.option(
+  "-r, --reload",
+  "Reloads the configuration files before running and checks runtime info"
+);
 
 // Add verify command
 program
   .command("verify")
   .description("Verifies the current installation and reports any problems")
-  .action(async (opts) => {
+  .action(async () => {
     await testRuntimeEnvironment();
   });
 
@@ -142,35 +123,26 @@ program
 program
   .command("status", { isDefault: true })
   .description("Print the current status of the server and managed processes")
-  .option(
-    "-n, --network",
-    "Also validate and current network, domain and certificate status"
-  )
-  .action(async (opts) => {
-    // opts.network
-    await importAndRun("status", opts);
+  .action(async (options) => {
+    await importAndRun("status", options);
   });
 
 // Add reload / reconfiguration command
 program
-  .command("reload")
+  .command("update")
   .description(
-    "Reconfigure the manager with modifications to the app config file"
+    "Reconfigure the manager with modifications made to the configuration"
   )
-  .action(async () => {
-    await importAndRun("reload");
+  .action(async (options) => {
+    await importAndRun("update", options);
   });
 
 // Add validation command
 program
   .command("validate")
   .description("Check if the current app config file is valid")
-  .option(
-    "-n, --network",
-    "Include validation of current network, domain and certificates in the config file"
-  )
-  .action(async (opts) => {
-    await importAndRun("validate", opts);
+  .action(async (options) => {
+    await importAndRun("validate", options);
   });
 
 // Add Lookup command
@@ -192,7 +164,7 @@ program
 // Add build command
 program
   .command("build")
-  .description("Create a new build from the source files")
+  .description("Create new executable files from the source code")
   .action(async () => {
     await createNewBuilds();
   });

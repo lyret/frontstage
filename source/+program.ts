@@ -1,15 +1,20 @@
-import * as Certificates from "./certificates";
-import * as ProcessManager from "./processes/_pm2";
-import { InternalProcesses } from "./processes";
-import * as Redirections from "./traffic/redirections";
-import * as InternalRoutes from "./traffic/internalRoutes";
-import * as State from "./state";
-import { createLogger } from "./messages";
-import { reloadManagerConfig, reloadApplicationsConfig } from "./configuration";
+import * as PrivateGlobalState from "./state/globalState";
 import * as PrivateProcesses from "./processes/_pm2";
 import * as PrivateMessages from "./messages/_messages";
 import * as PrivateDatabase from "./database/_connection";
-import { initializeState } from "./state/state";
+import { createLogger } from "./messages";
+import {
+  reloadApplicationsConfig,
+  reloadManagerConfig,
+  reloadNetworkConfig,
+  getCurrentRuntimeInformation,
+  State,
+  getOperationsToPerform,
+} from "./state";
+import { Redirections, InternalRoutes } from "./traffic";
+import { Certificates } from "./certificates";
+import { ApplicationProcesses, InternalProcesses } from "./processes";
+
 import { test } from "./dns/test";
 // NOTE: clean up imports after program functionality is done
 // NOTE: some private imports are made here
@@ -24,72 +29,42 @@ const logger = createLogger("Server Manager");
 
 /** Prints the current status of the server and managed processes */
 export async function status(options: { network: boolean }) {
-  await run(async () => {
-    const runners = await ProcessManager.list();
-
-    const table = runners.reduce<{
-      [key: string | number]: Partial<object>;
-    }>((tabularData, process) => {
-      tabularData[process.index] = {
-        LABEL: process.label,
-        PID: process.pid,
-
-        RESTARTS: process.details?.restarts || "?",
-        MEM: process.details
-          ? Math.round(process.details.memory / 1000000) + "mb"
-          : "?",
-        CPU: process.details ? process.details.cpu + "%" : "?",
-        UPTIME: process.details
-          ? Math.round(process.details.uptime / 10000000 / 60 / 60 / 60) + "h"
-          : "?",
-      };
-      return tabularData;
-    }, {});
-
-    console.table(table);
-
-    // FIXME: testcode
-    console.log("tested!");
-    // await scheduleOperation({
-    //   timestamp: Date.now() + 10000,
-    // });
+  await run(options, async () => {
+    const runtimeInfo = await getCurrentRuntimeInformation();
+    console.log(runtimeInfo);
   });
 }
 
-/** Reconfigures the manager with modifications to the app config file */
-export async function reload() {
-  await run(async () => {
-    // FIXME: CONTINUE HERE this is where im currently working
-    const state = await State.updateManagerState();
-    const runners = await ProcessManager.list();
-    const certs = await Certificates.list();
+/** Updates the runtime state of the manager with configuration updates */
+export async function update(options: { reload?: boolean }) {
+  options.reload = true;
+  await run(options, async () => {
+    const operations = await getOperationsToPerform();
+    logger.debug("Performing operations", operations);
 
-    console.log("RUNNING PROCESSES");
-    console.log(JSON.stringify(runners, null, 4));
-    console.log("DELTAS");
-    console.log(JSON.stringify(state.operations, null, 4));
-    console.log("NETWORK");
-    console.log(JSON.stringify(state.network, null, 4));
-    console.log("CERTIFICATES");
-    console.log(JSON.stringify(certs, null, 4));
-
-    console.log("Performing changes to internal routes...");
-    await InternalRoutes.performOperations(state.operations.internalRoutes);
-
-    console.log("Performing changes to redirection configurations...");
-    await Redirections.performOperations(state.operations.redirections);
-
-    console.log("Performing changes to certificate configurations...");
-    await Certificates.performOperations(state.operations.hostnames);
-
-    console.log("Performing changes to internal processes...");
-    await InternalProcesses.performOperations(
-      state.operations.internalProcesses
+    logger.info("Performing changes to redirection configurations...");
+    await Redirections.performOperations(operations.redirections);
+    logger.info("Performing changes to internal routes...");
+    await InternalRoutes.performOperations(operations.internalRoutes);
+    logger.info("Performing changes to certificate configurations...");
+    await Certificates.performOperations(operations.certificates);
+    logger.info("Performing changes to internal processes...");
+    await InternalProcesses.performOperations(operations.internalProcesses);
+    logger.info("Performing changes to application processes...");
+    await ApplicationProcesses.performOperations(
+      operations.applicationProcesses
     );
-    console.log("Scheduling certificate renewal if needed...");
+    logger.trace("Scheduling certificate renewal if needed...");
     await Certificates.performCertificationRenewal();
-    console.log("Done!");
+    logger.success("Update completed");
+  });
+}
 
+/** Checks if the current app config file is valid */
+export async function validate(options: {}) {
+  await run(options, async () => {
+    // console.log("validate");
+    // await test();
     // TODO: new experiments
     //   for (const { port } of operations.uniquePorts) {
     //     const a = await Network.isPortAvailable(port);
@@ -103,22 +78,12 @@ export async function reload() {
   });
 }
 
-/** Checks if the current app config file is valid */
-export async function validate(options: { network: boolean }) {
-  await run(async () => {
-    await reloadManagerConfig();
-    await reloadApplicationsConfig();
-    // console.log("validate");
-    // await test();
-  });
-}
-
 /** Look up good to know information */
 export async function lookup(options: {
   domain: string | undefined;
   port: string | undefined;
 }) {
-  await run(() => {
+  await run(options, () => {
     // TODO: Does it go to this server?
     console.log("lookup", options);
   });
@@ -133,12 +98,22 @@ export async function lookup(options: {
  * and that the program closes correctly after the method is executed,
  * as the CLI should not keep running
  */
-async function run(method: () => Promise<void> | void) {
+async function run(
+  options: { reload?: boolean } & any,
+  method: () => Promise<void> | void
+) {
   // Connect to the database
   await PrivateDatabase.connect();
 
+  // Reload the configuration if reload option is given
+  if (options.reload) {
+    await reloadManagerConfig();
+    await reloadApplicationsConfig();
+    await reloadNetworkConfig();
+  }
+
   // Determine the current state
-  await initializeState();
+  await PrivateGlobalState.initializeState();
 
   // Connect to PM2
   await PrivateProcesses.connect();

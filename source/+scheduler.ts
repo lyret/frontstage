@@ -1,5 +1,5 @@
 import * as Certificates from "./certificates";
-import { createLogger, onScheduleOperation } from "./messages";
+import { createLogger, onScheduledOperation } from "./messages";
 
 // SCHEDULER
 // This file contains the an internal process for scheduling operations
@@ -122,7 +122,7 @@ async function performOperations() {
  */
 export async function main() {
   // Add an event handler that validates and adds incoming operations
-  onScheduleOperation((operation) => {
+  onScheduledOperation((operation) => {
     logger.trace("Received new message", operation);
     addOperation({
       ...operation,

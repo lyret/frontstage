@@ -3,11 +3,11 @@ import * as FSP from "node:fs/promises";
 import * as Path from "node:path";
 import * as Yaml from "yaml";
 import { z } from "zod";
-import { updateState } from "../messages";
+import { updateConfiguration } from "../messages";
 
 /**
  * Reloads the manager configuration from the configuration file
- * and updates its current state in the database
+ * and updates it in the database
  * Also writes the complete configuration file to
  * the configuration file path so thats that the file reflects
  * the current state
@@ -76,7 +76,7 @@ export async function reloadManagerConfig(): Promise<void> {
   );
 
   // Update the configuration state in the database and message running internal processes
-  await updateState(
+  await updateConfiguration(
     "manager_configuration",
     validationResults.data as Configuration.Manager
   );
@@ -87,7 +87,7 @@ const managerConfigurationSchema = z
   .object({
     logging: z
       .object({
-        level: z.number().default(60),
+        level: z.number().default(40),
       })
       .strict()
       .default({}),

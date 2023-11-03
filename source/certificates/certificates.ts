@@ -10,7 +10,7 @@ import { State } from "../state";
 const logger = createLogger("Certificates");
 
 /** In-memory collection of loaded certificates */
-const loadedCertificates = new Map<string, Certificates.Certificate>();
+const loadedCertificates = new Map<string, Certificates.LoadedCertificate>();
 
 /**
  * Returns all stored certificates
@@ -26,7 +26,7 @@ export async function list(): Promise<Array<Certificates.StoredCertificate>> {
  */
 export async function load(
   hostname: string
-): Promise<Certificates.Certificate | undefined> {
+): Promise<Certificates.LoadedCertificate | undefined> {
   if (loadedCertificates.has(hostname)) {
     return loadedCertificates.get(hostname);
   } else {
@@ -43,7 +43,7 @@ export async function load(
  * Makes sure that certificates exists for all unique hostnames
  */
 export async function performOperations(
-  operations: Manager.Operations["hostnames"]
+  operations: State.Operations["certificates"]
 ) {
   const db = await Models.Certificates();
 
@@ -64,7 +64,7 @@ export async function performOperations(
   // Add new entries
   for (const entry of operations.added) {
     try {
-      await addCertificate(entry.hostname, entry.renewalMethod);
+      await addCertificate(entry.hostname, entry.label, entry.renewalMethod);
       logger.success(`Added a new certificate for ${entry.hostname}`);
     } catch (err) {
       logger.error(
@@ -119,8 +119,9 @@ export async function performCertificationRenewal() {
  */
 async function addCertificate(
   hostname: string,
-  renewalMethod?: Certificates.Certificate["renewalMethod"],
-  renewWithin?: Certificates.Certificate["renewWithin"]
+  label: string,
+  renewalMethod?: Certificates.LoadedCertificate["renewalMethod"],
+  renewWithin?: Certificates.LoadedCertificate["renewWithin"]
 ): Promise<void> {
   // Can't add an already existing certificate
   const existingCertificate = await load(hostname);
@@ -131,7 +132,7 @@ async function addCertificate(
   }
 
   // Add it using the internal function
-  await addOrRenewCertificate(hostname, renewalMethod, renewWithin);
+  await addOrRenewCertificate(hostname, label, renewalMethod, renewWithin);
 }
 
 /**
@@ -153,7 +154,7 @@ async function removeCertificate(hostname: string): Promise<void> {
  */
 function loadCertificate(
   cert: Omit<Certificates.StoredCertificate, "expiresOn">
-): Certificates.Certificate {
+): Certificates.LoadedCertificate {
   // Prevent empty/missing certificates to be loaded
   if (!cert.privateKey || !cert.certificate) {
     throw new Error(
@@ -174,7 +175,7 @@ function loadCertificate(
   );
 
   // Return the loaded certificate
-  const loadedCert: Certificates.Certificate = {
+  const loadedCert: Certificates.LoadedCertificate = {
     hostname: cert.hostname,
     secureContext: context,
     expiresOn: pki.validity.notAfter,
@@ -199,7 +200,7 @@ async function renewCertificate(
   forceRenewal: boolean = false,
   numberOfTries: number = 5
 ): Promise<void> {
-  const { hostname, renewalMethod, renewWithin } = certificate;
+  const { hostname, label, renewalMethod, renewWithin } = certificate;
 
   // Calculate the milliseconds to certificates expiration
   const timeToExpiration = getTimeToExpiration(certificate);
@@ -214,7 +215,7 @@ async function renewCertificate(
   logger.info(`Renewing the certificate for "${hostname}..."`);
 
   try {
-    await addOrRenewCertificate(hostname, renewalMethod, renewWithin);
+    await addOrRenewCertificate(hostname, label, renewalMethod, renewWithin);
   } catch (err) {
     // Retry the same renewal until the number of tries reaches zero
     if (numberOfTries >= 0) {
@@ -246,8 +247,9 @@ async function renewCertificate(
  */
 async function addOrRenewCertificate(
   hostname: string,
-  renewalMethod?: Certificates.Certificate["renewalMethod"],
-  renewWithin?: Certificates.Certificate["renewWithin"]
+  label: string,
+  renewalMethod?: Certificates.LoadedCertificate["renewalMethod"],
+  renewWithin?: Certificates.LoadedCertificate["renewWithin"]
 ) {
   // Determine the renewal method to use and that we do not override
   // the one given as an option
@@ -282,6 +284,7 @@ async function addOrRenewCertificate(
   // expiration date
   const { expiresOn } = loadCertificate({
     hostname,
+    label,
     certificate,
     privateKey,
     renewalMethod,
@@ -292,6 +295,7 @@ async function addOrRenewCertificate(
   const db = await Models.Certificates();
   await db.upsert({
     hostname,
+    label,
     certificate,
     expiresOn,
     privateKey,
@@ -301,7 +305,7 @@ async function addOrRenewCertificate(
 }
 
 /** utility function to get the default renewal method to use in the current environment */
-function defaultRenewalMethod(): Certificates.Certificate["renewalMethod"] {
+function defaultRenewalMethod(): Certificates.LoadedCertificate["renewalMethod"] {
   if (State.Manager.certificates.lets_encrypt) {
     return "lets-encrypt";
   }
@@ -314,7 +318,7 @@ function defaultRenewalMethod(): Certificates.Certificate["renewalMethod"] {
  * before becoming invalid
  */
 function getTimeToExpiration(
-  certificate: Certificates.StoredCertificate | Certificates.Certificate
+  certificate: Certificates.StoredCertificate | Certificates.LoadedCertificate
 ): number {
   return certificate.expiresOn
     ? certificate.expiresOn.valueOf() - Date.now() - certificate.renewWithin

@@ -158,6 +158,7 @@ function transform(proc: PM2.ProcessDescription | undefined): Process.Status {
       index: -1,
       pid: -1,
       namespace: "undefined",
+      details: null as any,
     };
   }
   const p = proc as any;
@@ -169,6 +170,7 @@ function transform(proc: PM2.ProcessDescription | undefined): Process.Status {
     details: {
       script: p.pm2_env.pm_exec_path,
       cwd: p.pm2_env.pm_cwd,
+      args: p.pm2_env.pm_exec_args, // TODO: untested
       restarts: p.pm2_env.restart_time,
       unstable_restarts: p.pm2_env.unstable_restarts,
       uptime: p.pm2_env.pm_uptime,

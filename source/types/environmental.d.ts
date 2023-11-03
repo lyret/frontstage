@@ -27,7 +27,15 @@ declare global {
   /** The path to the cache and temporary files directory */
   var CACHE_DIRECTORY: string;
 
-  // CONSTANTS
+  // PROCESSES
+
+  /** Daemon namespace for internal processes */
+  var APP_DAEMON_NAMESPACE: string;
+
+  /** Daemon namespace for application processes */
+  var MANAGER_DAEMON_NAMESPACE: string;
+
+  // OTHER CONSTANTS
 
   /** One hour in milliseconds */
   var ONE_HOUR: number;

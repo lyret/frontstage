@@ -137,7 +137,7 @@ export async function handleWebsocketUpgrade(
  * Handles operations that needs to be performed on internal routes
  */
 export async function performOperations(
-  operations: Manager.Operations["internalRoutes"]
+  operations: State.Operations["internalRoutes"]
 ) {
   const db = await Models.InternalRoutes();
 

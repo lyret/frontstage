@@ -6,13 +6,13 @@ import * as InternalRoutes from "./traffic/internalRoutes";
 import * as Redirections from "./traffic/redirections";
 import * as Output from "./traffic/httpHandlers";
 import * as Certificates from "./certificates";
-import { State } from "./state";
-import { createLogger, onState } from "./messages";
+import { State, initializeState } from "./state";
+import { createLogger } from "./messages";
 
 // PUBLIC WEB SERVER
 // This is a subprocess of the server manager, it is loaded and runs in the process manager. It handles all incomming traffic to the server
 // NOTE: Its probably in this file that wildcard domains needs to be handled, so that they are routed correctly
-// hostnames should be simplyfied in certificates (from *.asda.se to asda.se and handled here ?)
+// hostnames should be simplified in certificates (from *.asda.se to asda.se and handled here ?)
 
 /** Logger */
 const logger = createLogger("Public Server");
@@ -23,6 +23,9 @@ const logger = createLogger("Public Server");
  * to handle the incoming requests
  */
 export async function main() {
+  // Make sure that the state is initialized
+  await initializeState();
+
   // Create a HTTPS Server if enabled
   if (State.Manager.web_traffic.use_https) {
     // Create the https server with server name identification and support for resolving a TLS context depending on hostname

@@ -5,118 +5,75 @@ export {};
  * used throughout the server manager
  */
 declare global {
-  // TODO: where should states be? Name?
-  // TODO: Document
-  namespace States {
-    type States = {
-      manager_configuration: Configuration.Manager;
-      application_configuration: Array<Configuration.Application>;
-    };
-  }
-
   /**
    * Type definitions for the internal state
    * of the server manager
    */
-  namespace Manager {
-    /**
-     * Overarching current state of the manager
-     */
-    type State = {
-      operations: Operations;
-      network: NetworkState;
-    } & ApplicationsState;
+  namespace State {
+    /** The available configuration objects kept in the database */
+    type StoredConfigurations = {
+      manager_configuration: Configuration.Manager;
+      application_configuration: Array<Configuration.Application>;
+      network_configuration: Configuration.Network;
+    };
 
     /**
-     * Operations necessary to perform after reconfiguring
-     * the internal manager state
+     * Operations necessary to perform after changes are made
+     * in the configuration
      */
     type Operations = {
-      hostnames: {
-        added: ApplicationsState["uniqueHostnames"];
-        removed: ApplicationsState["uniqueHostnames"];
-        moved: ApplicationsState["uniqueHostnames"];
-      };
-      internalProcesses: {
-        start: ApplicationsState["internalProcesses"];
-        restart: ApplicationsState["internalProcesses"];
-        remove: ApplicationsState["internalProcesses"];
-      };
-      applicationProcesses: {
-        added: ApplicationsState["applicationProcesses"];
-        removed: ApplicationsState["applicationProcesses"];
-        moved: ApplicationsState["applicationProcesses"];
+      redirections: {
+        added: Array<Routes.Redirection>;
+        removed: Array<Routes.Redirection>;
+        moved: Array<Routes.Redirection>;
       };
       internalRoutes: {
-        added: ApplicationsState["internalRoutes"];
-        removed: ApplicationsState["internalRoutes"];
-        moved: ApplicationsState["internalRoutes"];
+        added: Array<Routes.InternalRoute>;
+        removed: Array<Routes.InternalRoute>;
+        moved: Array<Routes.InternalRoute>;
       };
-      redirections: {
-        added: ApplicationsState["redirects"];
-        removed: ApplicationsState["redirects"];
-        moved: ApplicationsState["redirects"];
+      certificates: {
+        added: Array<{
+          label: string;
+          renewalMethod: Certificates.LoadedCertificate["renewalMethod"];
+          hostname: string;
+        }>;
+        removed: Array<{
+          label: string;
+          renewalMethod: Certificates.LoadedCertificate["renewalMethod"];
+          hostname: string;
+        }>;
+        moved: Array<{
+          label: string;
+          renewalMethod: Certificates.LoadedCertificate["renewalMethod"];
+          hostname: string;
+        }>;
       };
-    };
-
-    /**
-     * State object categorised by data collected
-     * from reading the application configuration
-     */
-    type ApplicationsState = {
-      /** List of all configured redirections to web addresses to forward from the public server */
-      redirects: Array<Routes.Redirection>;
-      /** List of all configured internal routes to forward from the public server */
-      internalRoutes: Array<Routes.InternalRoute>;
-      /** List of all unique application labels */
-      uniqueLabels: Array<string>;
-      /** List of all unique hostnames found */
-      uniqueHostnames: Array<{
-        label: string;
-        renewalMethod: Certificates.Certificate["renewalMethod"];
-        hostname: string;
-      }>;
-      /** List of all internal ports registered */
-      uniquePorts: Array<{
-        label: string;
-        port: number;
-      }>;
-      /** List of all internal server manager processes that should be managed by PM2 */
-      internalProcesses: Array<{
-        label: string;
-        process: Process.Options;
-      }>;
-      /** List of all application processes that should be managed by PM2 */
-      applicationProcesses: Array<{
-        label: string;
-        process: Required<Process.Options>;
-      }>;
-      /** The build number for the server manager source code */
-      buildNumber: number; // NOTE: Build number should not be in application state!
-      /** List of all applications as configured in the YAML file */
-      configuration: Array<Configuration.Application>;
-    };
-
-    /**
-     * State object with current network information
-     * for the runtime machine of the manager
-     */
-    type NetworkState = {
-      /** The public internet ip-address of this machine */
-      publicIp: string;
-      /** List of loopback and LAN ip-addresses for this machine */
-      internalIps: Array<string>;
-      /** List of all ip-addresses that points to this router */
-      allIps: Array<string>;
-    };
-
-    /**
-     * State object for currently running processes managed by
-     * PM2
-     */
-    type ProcessesState = {
-      /** List of all ip-addresses that points to this router */
-      processes: List<Process.Status>;
+      internalProcesses: {
+        start: Array<{
+          label: string;
+          process: Process.Options;
+        }>;
+        restart: Array<{
+          label: string;
+          process: Process.Options;
+        }>;
+        remove: Array<{
+          label: string;
+          process: Process.Options;
+        }>;
+      };
+      applicationProcesses: {
+        start: Array<{
+          label: string;
+          process: Required<Process.Options>;
+        }>;
+        restart: Array<{
+          label: string;
+          process: Required<Process.Options>;
+        }>;
+        remove: Array<string>;
+      };
     };
   }
 
@@ -233,7 +190,7 @@ declare global {
     };
 
     /**
-     * Configuration file for a managed application
+     * Configuration for a managed application
      */
     type Application = {
       /** Unique identifying name for this application */
@@ -243,7 +200,7 @@ declare global {
       /** A list of several hostnames to use for routing traffic to this application */
       hostnames?: Array<Hostname>;
       /** The renewal method for certificates for hostname(s) of the application */
-      certificates: Certificates.Certificate["renewalMethod"];
+      certificates: Certificates.LoadedCertificate["renewalMethod"];
       /** (Optional) URL to route incoming web traffic to */
       redirect: string;
       /** (Optional) Directory to serve static files from */
@@ -256,6 +213,19 @@ declare global {
        */
       // TODO: Document
       process: Omit<Process.Options, "namespace">;
+    };
+
+    /**
+     * The current network configuration
+     * for the runtime machine of the server manager
+     */
+    type Network = {
+      /** The public internet ip-address of this machine */
+      publicIp: string;
+      /** List of loopback and LAN ip-addresses for this machine */
+      internalIps: Array<string>;
+      /** List of all ip-addresses that points to this router */
+      allIps: Array<string>;
     };
   }
 
@@ -277,9 +247,15 @@ declare global {
       /** The namespace the process is running under in PM2 */
       namespace: string;
       /** Additional details of the process in PM2 */
-      details?: {
+      details: {
         /** The path to the script being executed */
         script: string;
+        /** The arguments passed to the script FIXME: untested */
+        args?: string;
+        /** FIXME: untested */
+        env?: any;
+        /** FIXME: untested */
+        intepreter?: any;
         /** The working directory the script is executed from */
         cwd: string;
         /** The number of restarts as reported by PM2 */
@@ -327,10 +303,27 @@ declare global {
    * Type definitions for certificates
    */
   namespace Certificates {
+    /** A certificate as stored in the database */
+    type StoredCertificate = {
+      /** Hostname this certificate is valid for */
+      hostname: LoadedCertificate["hostname"];
+      /** Label of the application configuration this certificate originated from */
+      label: string;
+      /** Method used to renew this certificate */
+      renewalMethod: LoadedCertificate["renewalMethod"];
+      /** The estimated datetime for the expiration of this certificates validity */
+      expiresOn: LoadedCertificate["expiresOn"];
+      /** The time in milliseconds, before expiration that the certificate should be renewed */
+      renewWithin: LoadedCertificate["renewWithin"];
+      /** The PEM certificate */
+      certificate: string;
+      /** The PEM private key */
+      privateKey: string;
+    };
     /**
      * Certificate description for available and loaded certificates
      */
-    type Certificate = {
+    type LoadedCertificate = {
       /** Hostname this certificate is valid for */
       hostname: string;
       /** Method used to add and renew this certificate */
@@ -343,22 +336,6 @@ declare global {
       commonName: string;
       /** The context object used for https transport */
       secureContext: TLS.SecureContext;
-    };
-
-    /** A certificate as stored in the database */
-    type StoredCertificate = {
-      /** Hostname this certificate is valid for */
-      hostname: Certificate["hostname"];
-      /** Method used to renew this certificate */
-      renewalMethod: Certificate["renewalMethod"];
-      /** The estimated datetime for the expiration of this certificates validity */
-      expiresOn: Certificate["expiresOn"];
-      /** The time in milliseconds, before expiration that the certificate should be renewed */
-      renewWithin: Certificate["renewWithin"];
-      /** The PEM certificate */
-      certificate: string;
-      /** The PEM private key */
-      privateKey: string;
     };
   }
 

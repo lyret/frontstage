@@ -58,6 +58,10 @@ export const Models = defineModels({
         allowNull: false,
         unique: true,
       },
+      label: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
       renewalMethod: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -85,10 +89,10 @@ export const Models = defineModels({
     }
   ),
   /**
-   * State objects are stored as JSON blobs and accessible from all
+   * Configurations are stored as JSON blobs and accessible from all
    * internal processes
    */
-  StateObjects: defineModel<{ index: string; state: Object }>(
+  Configurations: defineModel<{ index: string; state: Object }>(
     {
       index: {
         type: DataTypes.STRING,

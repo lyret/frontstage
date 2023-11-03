@@ -11,7 +11,7 @@ const logger = createLogger("Redirections");
  * Handles operations that needs to be performed on redirections
  */
 export async function performOperations(
-  operations: Manager.Operations["redirections"]
+  operations: State.Operations["redirections"]
 ) {
   const db = await Models.Redirections();
 

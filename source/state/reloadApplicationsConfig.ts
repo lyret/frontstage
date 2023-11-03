@@ -1,11 +1,11 @@
 import * as FS from "node:fs";
 import * as Yaml from "yaml";
 import { z } from "zod";
-import { updateState } from "../messages";
+import { updateConfiguration } from "../messages";
 
 /**
  * Reloads the applications configuration from the configuration file
- * and updates its current state in the database
+ * and updates it in the database
  */
 export async function reloadApplicationsConfig(): Promise<void> {
   // Read the current application configuration file
@@ -44,7 +44,7 @@ export async function reloadApplicationsConfig(): Promise<void> {
   }
 
   // Update the configuration state in the database and running internal processes
-  await updateState(
+  await updateConfiguration(
     "application_configuration",
     validationResults.data as Array<Configuration.Application>
   );
