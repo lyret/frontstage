@@ -54,26 +54,24 @@ Your server should exist and be reachable, although Frontstage will verify this 
 
 **Installation**
 
-Perform the follow steps:
+```sh
+# install required software
+apk add nodejs npm # or similar, see: https://nodejs.org/en/download/package-manager
+npm install --global pm2
+pm2 startup
+# ...and follow any the instructions
 
-- Install [Node.js & NPM](https://nodejs.org/en/download/package-manager) (find the suitable way depending on your host machine)
+# install frontstage
+git clone git@github.com:lyret/frontstage.git
+cd frontstage
+npm clean-install
+cp .defaults.env .env
+nano .env
+# ...and configure your environment
+npx manager build
 
-- Install PM2 with `npm i -g pm2`;
-
-- Run `pm2 startup` and follow any instructions given.
-
-- Clone the repository to a suitable folder on your machine.
-
-- Run `npm ci` in the repo folder
-
-- Run `cp .defaults.env .env` in the repo folder
-
-- Open `.env` and configure your environment, save the file
-
-- Run `npx manager build`
-
-- _Reboot_ your environment to make sure that the process manager starts up atomaticly
-
-- Verify the installation with `npx manager verify`
-
-- Done!
+# optional: ensure the process manager starts on boot + verify installation
+sudo reboot
+npx manager verify
+# Done!
+```
