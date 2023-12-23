@@ -45,6 +45,10 @@ Kontrollera tillgängligheten till servern via nätverket
 
 ---
 
+- [ ] Lägga till db copy command `scp "root@167.99.19.191:/root/server-manager/.database/*" ~/Desktop/`
+
+---
+
 ## Ideas and roadmap for version 2024
 
 - [ ] Alerts using web notifications or similar
