@@ -49,7 +49,7 @@ The name _Frontstage_ refers to actions or performances that are meant for publi
 
 ## Getting started
 
-**Security sssumptions:**
+**Security assumptions:**
 Your server should exist and be reachable, although Frontstage will verify this for you. It's recommended that you configure a suitable _user account_ for running Frontstage and set up a firewall anywhere on your network to limit unwanted access.
 
 **Installation**
@@ -59,7 +59,7 @@ Your server should exist and be reachable, although Frontstage will verify this 
 apk add nodejs npm # or similar, see: https://nodejs.org/en/download/package-manager
 npm install --global pm2
 pm2 startup
-# ...and follow any the instructions
+# ...and follow any instructions
 
 # install frontstage
 git clone git@github.com:lyret/frontstage.git

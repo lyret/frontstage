@@ -5,8 +5,8 @@ import { $ } from "execa";
 
 // SERVER MANAGER TESTS
 // This file exports a function for testing if the runtime
-// environment is configurated correctly for the server manager
-// Will fail if PM2 is not available or any global dependcies
+// environment is configured correctly for the server manager
+// Will fail if PM2 is not available or any global dependencies
 // are on incorrect versions
 
 export async function testRuntimeEnvironment() {
@@ -65,7 +65,6 @@ async function testIfProcessManagerIsRunning() {
           return;
         }
         const actualCount = parseInt(stdout.trim());
-        console.log("here", actualCount);
         resolve(actualCount > 2);
       });
     });
