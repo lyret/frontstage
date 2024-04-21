@@ -218,7 +218,7 @@ async function renewCertificate(
     await addOrRenewCertificate(hostname, label, renewalMethod, renewWithin);
   } catch (err) {
     // Retry the same renewal until the number of tries reaches zero
-    if (numberOfTries >= 0) {
+    if (numberOfTries >= 1) {
       logger.warn(
         `Unable to renew the certificate for hostname ${hostname}, retries left: ${
           numberOfTries - 1
