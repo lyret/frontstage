@@ -29,7 +29,7 @@ export function generateSelfSignedCertificate(
   }
 
   // Generate key pair
-  const keys = Forge.pki.rsa.generateKeyPair(1024);
+  const keys = Forge.pki.rsa.generateKeyPair(2048);
 
   // Create certificate attributes
   const attributes = [
