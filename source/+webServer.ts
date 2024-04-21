@@ -5,7 +5,7 @@ import * as Path from "node:path";
 import * as InternalRoutes from "./traffic/internalRoutes";
 import * as Redirections from "./traffic/redirections";
 import * as Output from "./traffic/httpHandlers";
-import * as Certificates from "./certificates";
+import { Certificates } from "./certificates";
 import { State, initializeState } from "./state";
 import { createLogger } from "./messages";
 

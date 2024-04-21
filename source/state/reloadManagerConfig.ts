@@ -128,9 +128,10 @@ const managerConfigurationSchema = z
       .default({}),
     dns_records: z
       .object({
-        digital_ocean: z
+        loopia: z
           .object({
-            token: z.string().nullish(),
+            username: z.string(),
+            password: z.string(),
           })
           .strict()
           .nullable()

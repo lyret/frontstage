@@ -15,7 +15,7 @@ import { Redirections, InternalRoutes } from "./traffic";
 import { Certificates } from "./certificates";
 import { ApplicationProcesses, InternalProcesses } from "./processes";
 
-import { test } from "./dns/test";
+import { DNSRecords } from "./dns";
 // NOTE: clean up imports after program functionality is done
 // NOTE: some private imports are made here
 
@@ -26,6 +26,16 @@ import { test } from "./dns/test";
 
 /** Logger */
 const logger = createLogger("Server Manager");
+
+
+/** DNS TODO: document */
+export async function dns(options: {}) {
+  await run(options, async () => {
+    const records = await DNSRecords.list()
+    console.table(records);
+  });
+}
+
 
 /** Prints the current status of the server and managed processes */
 export async function status(options: { network: boolean }) {
