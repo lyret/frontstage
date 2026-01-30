@@ -16,3 +16,37 @@ configuration.yaml
 
 # Applications Configuration file
 applications.yaml
+
+# Development files
+.dev-*.pid
+.dev-*.port
+test-apps/
+*.backup
+*.bak
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+Thumbs.db
+.AppleDouble
+.LSOverride
+
+# Temporary files
+*.tmp
+*.temp

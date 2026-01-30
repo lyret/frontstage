@@ -21,7 +21,7 @@ export async function reloadApplicationsConfig(): Promise<void> {
 
   // Output any problems with the configuration and raise an error
   if (!validationResults.success) {
-    console.error(`There are errors in the application configuration file:`);
+    console.error(`There are errors in the application configuration file (${APPS_CONFIG_FILE}):`);
     console.error(`Fix the following errors:\n`);
 
     // Print each issue, transform the path to make it readable
@@ -35,7 +35,24 @@ export async function reloadApplicationsConfig(): Promise<void> {
           return subpath;
         })
         .join(", ");
-      console.error(`  ${path}: ${issue.message}`);
+
+      // Provide clearer error messages for common issues
+      let errorMessage = issue.message;
+      if (issue.code === "unrecognized_keys") {
+        const unrecognizedKeys = (issue as any).keys || [];
+        const keysList = unrecognizedKeys.map((key: string) => `'${key}'`).join(", ");
+        const pathContext = path ? ` in section '${path}'` : "";
+        errorMessage = `Unknown configuration option(s): ${keysList}${pathContext}. These keys are not supported in the configuration file. Please check the documentation for valid configuration options.`;
+      } else if (errorMessage.includes("Unrecognized key(s) in object:")) {
+        const match = errorMessage.match(/Unrecognized key\(s\) in object: (.+)/);
+        if (match) {
+          const keys = match[1];
+          const pathContext = path ? ` in section '${path}'` : "";
+          errorMessage = `Unknown configuration option(s): ${keys}${pathContext}. These keys are not supported in the configuration file. Please check the documentation for valid configuration options.`;
+        }
+      }
+
+      console.error(`  ${path ? path + ": " : ""}${errorMessage}`);
     }
     console.error("");
 

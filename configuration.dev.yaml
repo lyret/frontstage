@@ -1,0 +1,41 @@
+# Frontstage Development Configuration
+# This configuration is optimized for local development and testing
+# It avoids creating real certificates or binding to privileged ports
+
+logging:
+  level: 20  # debug level for development
+
+web_traffic:
+  use_http: true
+  http_port: 8080      # Non-privileged port for development
+  http_host: 127.0.0.1 # Localhost only
+  use_https: false     # Disable HTTPS for development
+  https_port: 8443     # Non-privileged HTTPS port (if needed)
+  https_host: 127.0.0.1
+  use_forwarded_host: false
+
+certificates:
+  self_signed_certificates:
+    country: "DEV"
+    state: "Development"
+    locality: "Localhost"
+    organization: "Frontstage Development"
+  # Let's Encrypt disabled for development
+  # lets_encrypt: null
+
+# DNS management disabled for development
+# dns_records: null
+
+daemons:
+  root_directory: "./apps"
+
+# Development-specific settings
+development:
+  # Skip certificate generation entirely
+  skip_certificates: true
+  # Skip DNS verification
+  skip_dns_verification: true
+  # Use mock data where possible
+  use_mock_data: true
+  # Enable debug endpoints
+  enable_debug_endpoints: true

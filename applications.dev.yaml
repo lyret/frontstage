@@ -1,0 +1,53 @@
+# Frontstage Development Applications Configuration
+# This configuration is designed for local testing and development
+# All applications use localhost and non-privileged ports
+
+# Frontstage GUI - Main management interface
+- label: "dev/frontstage-gui"
+  hostname: "localhost"
+  port: 5173
+  serve: "./gui"
+
+# Test redirect example
+- label: "dev/redirect-test"
+  hostname: "redirect.localhost"
+  redirect: "https://github.com/lyret/frontstage"
+
+# Test static site example
+- label: "dev/static-test"
+  hostname: "static.localhost"
+  serve: "./gui"  # Reuse GUI files as example static content
+
+# Mock Node.js application example
+- label: "dev/mock-node-app"
+  hostname: "app.localhost"
+  port: 3000
+  # Uncomment to test with a real Node.js app
+  # process:
+  #   cwd: "./test-apps/node-example"
+  #   script: "server.js"
+  #   env:
+  #     NODE_ENV: "development"
+  #     PORT: 3000
+
+# Mock API example
+- label: "dev/mock-api"
+  hostname: "api.localhost"
+  port: 3001
+  # Uncomment to test with a real API
+  # process:
+  #   cwd: "./test-apps/api-example"
+  #   script: "app.py"
+  #   interpreter: "python3"
+  #   env:
+  #     FLASK_ENV: "development"
+  #     PORT: 3001
+
+# Development testing endpoints
+- label: "dev/test-subdomain"
+  hostnames:
+    - "test1.localhost"
+    - "test2.localhost"
+    - "www.localhost"
+  port: 8000
+  # This would route multiple subdomains to the same application

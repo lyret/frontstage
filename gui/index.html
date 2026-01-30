@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontstage - Server Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--background);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .app {
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 16rem;
+            background-color: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 24px;
+            height: 24px;
+            color: var(--primary);
+        }
+
+        .logo-text {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 1rem 0;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1.5rem;
+            text-decoration: none;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+            border-right: 3px solid transparent;
+            cursor: pointer;
+        }
+
+        .nav-item:hover {
+            background-color: var(--background);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background-color: var(--background);
+            color: var(--primary);
+            border-right-color: var(--primary);
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+        }
+
+        .sidebar-footer {
+            padding: 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-dot {
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 50%;
+            background-color: var(--success);
+        }
+
+        .status-text {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .header {
+            background-color: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 0.375rem;
+            background-color: var(--surface);
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background-color: var(--background);
+            color: var(--text-primary);
+        }
+
+        .btn.primary {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .btn.primary:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .content {
+            flex: 1;
+            overflow: auto;
+            padding: 1.5rem;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .status-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            box-shadow: var(--shadow);
+            transition: all 0.2s;
+        }
+
+        .status-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+
+        .status-icon {
+            width: 3rem;
+            height: 3rem;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .status-icon.redirects { background-color: var(--primary); }
+        .status-icon.routes { background-color: var(--success); }
+        .status-icon.certificates { background-color: var(--warning); }
+        .status-icon.processes { background-color: var(--secondary); }
+
+        .status-content h3 {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+        }
+
+        .status-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .status-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .data-table {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .table-header {
+            background-color: var(--background);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .table-content {
+            padding: 1.5rem;
+        }
+
+        .table-row {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr 1fr;
+            gap: 1rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+            align-items: center;
+        }
+
+        .table-row:last-child {
+            border-bottom: none;
+        }
+
+        .table-cell {
+            font-size: 0.875rem;
+        }
+
+        .table-cell.label {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .table-cell.hostname {
+            color: var(--text-secondary);
+            font-family: monospace;
+        }
+
+        .table-cell.status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .spinner {
+            width: 2rem;
+            height: 2rem;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .error {
+            color: var(--error);
+            background-color: rgba(239, 68, 68, 0.1);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+
+            .content {
+                padding: 1rem;
+            }
+
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .table-row {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <svg class="logo-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+                    </svg>
+                    <span class="logo-text">Frontstage</span>
+                </div>
+            </div>
+
+            <div class="sidebar-nav">
+                <div class="nav-item active" data-tab="overview">
+                    <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    <span>Overview</span>
+                </div>
+                <div class="nav-item" data-tab="applications">
+                    <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+                    </svg>
+                    <span>Applications</span>
+                </div>
+                <div class="nav-item" data-tab="domains">
+                    <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+                    </svg>
+                    <span>Domains</span>
+                </div>
+                <div class="nav-item" data-tab="certificates">
+                    <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.031 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                    </svg>
+                    <span>Certificates</span>
+                </div>
+                <div class="nav-item" data-tab="settings">
+                    <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    <span>Settings</span>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span class="status-text">Server Online</span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main content -->
+        <main class="main">
+            <header class="header">
+                <h1 class="page-title" id="page-title">System Overview</h1>
+                <div class="header-actions">
+                    <button class="btn" onclick="refreshData()">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        Refresh
+                    </button>
+                </div>
+            </header>
+
+            <div class="content">
+                <!-- Overview Tab -->
+                <div id="overview-tab" class="tab-content">
+                    <div class="loading" id="loading">
+                        <div class="spinner"></div>
+                        <p>Loading system status...</p>
+                    </div>
+
+                    <div id="overview-content" class="hidden">
+                        <div class="status-grid">
+                            <div class="status-card">
+                                <div class="status-icon redirects">
+                                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9 3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path>
+                                    </svg>
+                                </div>
+                                <div class="status-content">
+                                    <h3>Redirects</h3>
+                                    <p class="status-number" id="redirects-count">-</p>
+                                    <p class="status-label">Active redirections</p>
+                                </div>
+                            </div>
+
+                            <div class="status-card">
+                                <div class="status-icon routes">
+                                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+                                    </svg>
+                                </div>
+                                <div class="status-content">
+                                    <h3>Internal Routes</h3>
+                                    <p class="status-number" id="routes-count">-</p>
+                                    <p class="status-label">Proxy routes</p>
+                                </div>
+                            </div>
+
+                            <div class="status-card">
+                                <div class="status-icon certificates">
+                                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.031 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                    </svg>
+                                </div>
+                                <div class="status-content">
+                                    <h3>Certificates</h3>
+                                    <p class="status-number" id="certificates-count">-</p>
+                                    <p class="status-label">SSL certificates</p>
+                                </div>
+                            </div>
+
+                            <div class="status-card">
+                                <div class="status-icon processes">
+                                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                    </svg>
+                                </div>
+                                <div class="status-content">
+                                    <h3>Processes</h3>
+                                    <p class="status-number" id="processes-count">-</p>
+                                    <p class="status-label">Running processes</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="data-table">
+                            <div class="table-header">Recent Applications</div>
+                            <div class="table-content" id="applications-table">
+                                <!-- Applications will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Applications Tab -->
+                <div id="applications-tab" class="tab-content hidden">
+                    <div class="data-table">
+                        <div class="table-header">Applications</div>
+                        <div class="table-content" id="all-applications-table">
+                            <!-- All applications will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Other tabs would be similar -->
+                <div id="domains-tab" class="tab-content hidden">
+                    <div class="data-table">
+                        <div class="table-header">Domain Management</div>
+                        <div class="table-content">
+                            <p>Domain management features coming soon...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="certificates-tab" class="tab-content hidden">
+                    <div class="data-table">
+                        <div class="table-header">SSL Certificates</div>
+                        <div class="table-content" id="certificates-table">
+                            <!-- Certificates will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div id="settings-tab" class="tab-content hidden">
+                    <div class="data-table">
+                        <div class="table-header">System Settings</div>
+                        <div class="table-content">
+                            <p>System configuration interface coming soon...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Sample data - in production this would come from Frontstage API
+        const mockData = {
+            redirects: [
+                { label: 'project/newstomorow', hostname: 'roligt.se', target: 'docs.google.com/...' },
+                { label: 'sys/transmission-ui', hostname: 'freaks.se', target: 'google.se' }
+            ],
+            internalRoutes: [],
+            certificates: [
+                { hostname: 'roligt.se', renewalMethod: 'self-signed', expiresOn: '2024-06-08', label: 'project/newstomorow' },
+                { hostname: 'freaks.se', renewalMethod: 'self-signed', expiresOn: '2024-06-08', label: 'sys/transmission-ui' }
+            ],
+            applicationProcesses: [],
+            internalProcesses: 2,
+            uniqueLabels: ['project/newstomorow', 'sys/transmission-ui']
+        };
+
+        // Tab switching
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const tabName = this.dataset.tab;
+                switchTab(tabName);
+            });
+        });
+
+        function switchTab(tabName) {
+            // Update navigation
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+            // Update content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            document.getElementById(`${tabName}-tab`).classList.remove('hidden');
+
+            // Update title
+            const titles = {
+                'overview': 'System Overview',
+                'applications': 'Applications',
+                'domains': 'Domains',
+                'certificates': 'Certificates',
+                'settings': 'Settings'
+            };
+            document.getElementById('page-title').textContent = titles[tabName];
+        }
+
+        // Load data
+        function loadData() {
+            setTimeout(() => {
+                // Update counts
+                document.getElementById('redirects-count').textContent = mockData.redirects.length;
+                document.getElementById('routes-count').textContent = mockData.internalRoutes.length;
+                document.getElementById('certificates-count').textContent = mockData.certificates.length;
+                document.getElementById('processes-count').textContent = mockData.internalProcesses;
+
+                // Load applications table
+                loadApplicationsTable();
+                loadCertificatesTable();
+
+                // Show content
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('overview-content').classList.remove('hidden');
+            }, 1000);
+        }
+
+        function loadApplicationsTable() {
+            const tableContent = document.getElementById('applications-table');
+            const allTableContent = document.getElementById('all-applications-table');
+
+            if (mockData.redirects.length === 0) {
+                tableContent.innerHTML = '<p>No applications configured</p>';
+                allTableContent.innerHTML = '<p>No applications configured</p>';
+                return;
+            }
+
+            let html = '';
+            mockData.redirects.forEach(app => {
+                html += `
+                    <div class="table-row">
+                        <div class="table-cell label">${app.label}</div>
+                        <div class="table-cell hostname">${app.hostname}</div>
+                        <div class="table-cell">Redirect</div>
+                        <div class="table-cell status">
+                            <div class="status-dot" style="background-color: var(--success);"></div>
+                            Running
+                        </div>
+                    </div>
+                `;
+            });
+
+            tableContent.innerHTML = html;
+            allTableContent.innerHTML = html;
+        }
+
+        function loadCertificatesTable() {
+            const tableContent = document.getElementById('certificates-table');
+
+            if (mockData.certificates.length === 0) {
+                tableContent.innerHTML = '<p>No certificates found</p>';
+                return;
+            }
+
+            let html = '';
+            mockData.certificates.forEach(cert => {
+                const expiryDate = new Date(cert.expiresOn);
+                const daysUntilExpiry = Math.ceil((expiryDate - new Date()) / (1000 * 60 * 60 * 24));
+                const isExpired = daysUntilExpiry < 0;
+                const isExpiring = daysUntilExpiry < 30;
+
+                html += `
+                    <div class="table-row">
+                        <div class="table-cell label">${cert.hostname}</div>
+                        <div class="table-cell">${cert.renewalMethod}</div>
+                        <div class="table-cell">${cert.expiresOn}</div>
+                        <div class="table-cell status">
+                            <div class="status-dot" style="background-color: ${isExpired ? 'var(--error)' : (isExpiring ? 'var(--warning)' : 'var(--success)')};"></div>
+                            ${isExpired ? 'Expired' : (isExpiring ? `${daysUntilExpiry} days` : 'Valid')}
+                        </div>
+                    </div>
+                `;
+            });
+
+            tableContent.innerHTML = html;
+        }
+
+        function refreshData() {
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('overview-content').classList.add('hidden');
+            loadData();
+        }
+
+        // Initialize
+        loadData();
+    </script>
+</body>
+</html>

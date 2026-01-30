@@ -14,18 +14,15 @@ const openLocalChannels = new Map<string, LocalChannel>();
 export type MessageHandler<T> = (data: T) => void | Promise<void>;
 
 /** Uses a broadcast channel to listen to incoming messages of the given type */
-export async function listenToMessages<T>(
-  topic: string,
-  handler: MessageHandler<T>
-) {
-  // Get opened channels
-  const [broadcastChannel, localChannel] = getChannels<T>(topic);
+export async function listenToMessages<T>(topic: string, handler: MessageHandler<T>) {
+	// Get opened channels
+	const [broadcastChannel, localChannel] = getChannels<T>(topic);
 
-  // Add the handler as an event listener on the broadcast channel
-  broadcastChannel.addEventListener("message", handler);
+	// Add the handler as an event listener on the broadcast channel
+	broadcastChannel.addEventListener("message", handler);
 
-  // Add it to the local listener
-  localChannel.on("message", handler);
+	// Add it to the local listener
+	localChannel.on("message", handler);
 }
 
 /**
@@ -35,26 +32,26 @@ export async function listenToMessages<T>(
  * @param waitForResponse waits a response with status 200 before resolving
  */
 export async function sendMessage<T>(topic: string, message: T) {
-  // Get opened channels
-  const [broadcastChannel, localChannel] = getChannels<T>(topic);
+	// Get opened channels
+	const [broadcastChannel, localChannel] = getChannels<T>(topic);
 
-  // Post the message on the broadcast channel
-  await broadcastChannel.postMessage(message);
-  // Post the message on the local channel
-  localChannel.emit("message", message);
+	// Post the message on the broadcast channel
+	await broadcastChannel.postMessage(message);
+	// Post the message on the local channel
+	localChannel.emit("message", message);
 }
 
 /** Closes all open broadcast channels */
 export async function disconnect() {
-  for (const channel of openBroadcastChannels.values()) {
-    await channel.close();
-  }
-  openBroadcastChannels.clear();
+	for (const channel of openBroadcastChannels.values()) {
+		await channel.close();
+	}
+	openBroadcastChannels.clear();
 
-  for (const channel of openLocalChannels.values()) {
-    channel.removeAllListeners();
-  }
-  openLocalChannels.clear();
+	for (const channel of openLocalChannels.values()) {
+		channel.removeAllListeners();
+	}
+	openLocalChannels.clear();
 }
 
 /**
@@ -64,24 +61,23 @@ export async function disconnect() {
  * and makes sure they are cached and closable
  */
 function getChannels<T>(topic: string): [BroadcastChannel<T>, LocalChannel] {
-  // Append the current build version number to the topic to avoid version conflicts
-  topic = `servermanager.${topic.toLowerCase().trim()}.${BUILD_NUMBER}`;
+	// Append the current build version number to the topic to avoid version conflicts
+	topic = `servermanager.${topic.toLowerCase().trim()}.${BUILD_NUMBER}`;
 
-  // Get the broadcast channel for the given topic, use the cached version if it exists
-  const broadcastChannel =
-    openBroadcastChannels.get(topic) || new BroadcastChannel<T>(topic);
+	// Get the broadcast channel for the given topic, use the cached version if it exists
+	const broadcastChannel = openBroadcastChannels.get(topic) || new BroadcastChannel<T>(topic);
 
-  // Get the local channel for the given topic, use the cached version if it exists
-  const localChannel = openLocalChannels.get(topic) || new LocalChannel();
+	// Get the local channel for the given topic, use the cached version if it exists
+	const localChannel = openLocalChannels.get(topic) || new LocalChannel();
 
-  // Cache the opened channels
-  if (!openBroadcastChannels.has(topic)) {
-    openBroadcastChannels.set(topic, broadcastChannel);
-  }
-  if (!openLocalChannels.has(topic)) {
-    openLocalChannels.set(topic, localChannel);
-  }
+	// Cache the opened channels
+	if (!openBroadcastChannels.has(topic)) {
+		openBroadcastChannels.set(topic, broadcastChannel);
+	}
+	if (!openLocalChannels.has(topic)) {
+		openLocalChannels.set(topic, localChannel);
+	}
 
-  // Return the channels
-  return [broadcastChannel as BroadcastChannel<T>, localChannel];
+	// Return the channels
+	return [broadcastChannel as BroadcastChannel<T>, localChannel];
 }
