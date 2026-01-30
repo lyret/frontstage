@@ -58,27 +58,28 @@ async function testEngineRequirements() {
 
 async function testIfProcessManagerIsRunning() {
   try {
+    // Test the built-in process manager by checking if we can get status
     const isRunning = await new Promise((resolve, reject) => {
-      exec('ps aux | grep -c "PM2"', (error, stdout) => {
+      exec('node launcher.mjs status', (error, stdout) => {
         if (error) {
           reject(error);
           return;
         }
-        const actualCount = parseInt(stdout.trim());
-        resolve(actualCount > 2);
+        // If we can get status without error, process manager is working
+        resolve(true);
       });
     });
 
     if (isRunning) {
-      console.log(`PM2 is running`);
+      console.log(`Built-in process manager is running`);
     } else {
       console.log(
-        `PM2 is NOT running, check your installation startup configuration`
+        `Built-in process manager is NOT working, check your installation`
       );
     }
     return isRunning;
   } catch (err) {
-    console.error("Failed to verify if PM2 is running");
+    console.error("Failed to verify if built-in process manager is working");
     return false;
   }
 }

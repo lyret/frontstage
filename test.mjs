@@ -253,8 +253,8 @@ function runTests() {
 		}
 		console.log("");
 		console.log("Next steps:");
-		console.log("  1. Run: ./dev.sh start    (for development mode)");
-		console.log("  2. Or:   ./setup.sh       (for production setup)");
+		console.log("  1. Run: node dev.mjs start    (for development mode)");
+		console.log("  2. Or:   node setup.mjs       (for production setup)");
 		console.log("  3. Or:   node launcher.mjs build && node launcher.mjs status");
 		console.log("");
 		console.log("Note: Frontstage now uses built-in process management instead of PM2");

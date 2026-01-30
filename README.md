@@ -62,6 +62,9 @@ npm clean-install
 # Build the project
 node launcher.mjs build
 
+# Verify installation
+node launcher.mjs verify
+
 # Validate configuration
 node launcher.mjs validate
 
