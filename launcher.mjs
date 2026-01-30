@@ -87,6 +87,7 @@ async function createNewBuilds() {
 		entryPoints,
 		bundle: true,
 		sourcemap: true,
+
 		define: constants,
 		outdir: Path.resolve(process.env["BIN_DIRECTORY"]),
 	};

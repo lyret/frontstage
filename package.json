@@ -8,6 +8,7 @@
 		"node": ">18.*.* <=21.*.*",
 		"npm": ">=9.*.*"
 	},
+
 	"scripts": {
 		"dev": "node dev.mjs",
 		"dev:start": "node dev.mjs start",

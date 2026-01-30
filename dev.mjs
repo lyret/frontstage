@@ -422,39 +422,20 @@ if __name__ == '__main__':
     log.info('Starting Frontstage internal processes...');
 
     try {
-      // Start internal processes via PM2 directly (skip update to avoid process conflicts)
-      const processes = [
-        { name: 'SCHEDULER', file: '.bin/+scheduler.js' },
-        { name: 'WEBSERVER', file: '.bin/+webServer.js' }
-      ];
+      // Use the launcher.mjs update command which uses built-in process manager
+      log.info('Running Frontstage update to start internal processes...');
+      const { stdout: updateOutput, stderr: updateError } = await exec('node launcher.mjs update');
+      if (updateOutput) log.debug(updateOutput.trim());
+      if (updateError && !updateError.includes('WARNING')) log.debug(updateError.trim());
 
-      for (const process of processes) {
-        try {
-          // Check if process is already running
-          const { stdout: listOutput } = await exec(`pm2 jlist`);
-          const processes = JSON.parse(listOutput);
-          const existing = processes.find(p => p.name === process.name);
-
-          if (existing && existing.pm2_env.status === 'online') {
-            log.info(`${process.name} is already running`);
-            continue;
-          }
-
-          // Start the process
-          const { stdout } = await exec(`pm2 start ${process.file} --name ${process.name}`);
-          log.success(`Started ${process.name}`);
-
-        } catch (error) {
-          log.error(`Failed to start ${process.name}: ${error.message}`);
-        }
-      }
+      log.success('Started internal processes via built-in process manager');
 
       // Give processes time to start
       await new Promise(resolve => setTimeout(resolve, 3000));
 
       // Test if web server is responding
       try {
-        await exec('curl -s --connect-timeout 2 http://localhost:8080');
+        const { stdout } = await exec('curl -s --connect-timeout 2 http://localhost:8080');
         log.success('Web server is responding');
       } catch (error) {
         log.warning('Web server may not be fully started yet');
@@ -496,24 +477,16 @@ if __name__ == '__main__':
       }
     });
 
-    // Stop Frontstage internal processes via PM2
-    const frontstageProcesses = ['SCHEDULER', 'WEBSERVER'];
-
-    for (const processName of frontstageProcesses) {
-      try {
-        const { stdout } = await exec(`pm2 jlist`);
-        const processes = JSON.parse(stdout);
-        const process = processes.find(p => p.name === processName);
-
-        if (process && process.pm2_env.status === 'online') {
-          await exec(`pm2 stop ${processName}`);
-          await exec(`pm2 delete ${processName}`);
-          log.success(`Stopped ${processName}`);
-          stopped++;
-        }
-      } catch (error) {
-        log.debug(`Error stopping ${processName}: ${error.message}`);
+    // Stop Frontstage internal processes - they will be stopped when the main process stops
+    // The built-in process manager handles this automatically
+    try {
+      // Check if any internal processes are running by checking status
+      const { stdout } = await exec('node launcher.mjs status');
+      if (stdout.includes('internalProcesses')) {
+        log.info('Internal processes will be managed by built-in process manager');
       }
+    } catch (error) {
+      log.debug('No internal processes to stop');
     }
 
     // Clean up PID files
@@ -557,25 +530,22 @@ if __name__ == '__main__':
       }
     });
 
-    // Check Frontstage internal processes
-    const frontstageProcesses = ['SCHEDULER', 'WEBSERVER'];
+    // Check Frontstage internal processes via status command
     let frontstageRunning = false;
+    try {
+      const { stdout } = await exec('node launcher.mjs status');
+      const status = JSON.parse(stdout);
 
-    for (const processName of frontstageProcesses) {
-      try {
-        const { stdout } = await exec(`pm2 jlist`);
-        const processes = JSON.parse(stdout);
-        const process = processes.find(p => p.name === processName);
-
-        if (process && process.pm2_env.status === 'online') {
-          log.success(`${processName}: Running (PM2 PID: ${process.pid})`);
+      if (status.internalProcesses && status.internalProcesses.length > 0) {
+        status.internalProcesses.forEach(proc => {
+          log.success(`${proc.label}: Running (PID: ${proc.pid})`);
           frontstageRunning = true;
-        } else {
-          log.warning(`${processName}: Not running`);
-        }
-      } catch (error) {
-        log.warning(`${processName}: Status unknown`);
+        });
+      } else {
+        log.warning('No internal processes running');
       }
+    } catch (error) {
+      log.warning('Could not check Frontstage status');
     }
 
     console.log();

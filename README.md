@@ -38,7 +38,7 @@ Frontstage is a comprehensive server management system that simplifies hosting a
 - **Node.js**: Version 18+ (tested up to 21)
 - **Linux/macOS**: Tested on Ubuntu, Debian, CentOS, and macOS
 
-**Note**: PM2 is no longer required - Frontstage now includes built-in process management.
+**Note**: Frontstage includes built-in process management, but PM2 may still be used for production deployments.
 
 ## 🛠 Installation
 
@@ -62,8 +62,11 @@ npm clean-install
 # Build the project
 node launcher.mjs build
 
-# Verify installation
-node launcher.mjs verify
+# Validate configuration
+node launcher.mjs validate
+
+# For development, use:
+node dev.mjs start
 ```
 
 ## ⚙️ Configuration
@@ -274,6 +277,12 @@ node dev.mjs stop           # Stop all development services
 node dev.mjs status         # Check development environment status
 node dev.mjs restart        # Restart development services
 node dev.mjs cleanup        # Clean up test files and processes
+
+# Main launcher commands
+node launcher.mjs status    # Show current system status
+node launcher.mjs update    # Apply configuration changes
+node launcher.mjs validate  # Validate configuration files
+node launcher.mjs build     # Build TypeScript source
 
 # Diagnostics and troubleshooting
 node diagnose.mjs           # Run full system diagnostic

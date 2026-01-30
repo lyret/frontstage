@@ -5,7 +5,6 @@
 # Frontstage GUI - Main management interface
 - label: "dev/frontstage-gui"
   hostname: "localhost"
-  port: 5173
   serve: "./gui"
 
 # Test redirect example

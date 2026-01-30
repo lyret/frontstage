@@ -48,6 +48,7 @@ export const Dummy: State.Operations["internalProcesses"]["start"][0] = {
 		namespace: MANAGER_DAEMON_NAMESPACE,
 		cwd: BIN_DIRECTORY,
 		script: Path.resolve(BIN_DIRECTORY, "+dummy.js"),
+		interpreter: "node",
 	},
 };
 
@@ -58,6 +59,7 @@ export const Scheduler: State.Operations["internalProcesses"]["start"][0] = {
 		namespace: MANAGER_DAEMON_NAMESPACE,
 		cwd: BIN_DIRECTORY,
 		script: Path.resolve(BIN_DIRECTORY, "+scheduler.js"),
+		interpreter: "node",
 	},
 };
 
@@ -68,5 +70,6 @@ export const WebServer: State.Operations["internalProcesses"]["start"][0] = {
 		namespace: MANAGER_DAEMON_NAMESPACE,
 		cwd: BIN_DIRECTORY,
 		script: Path.resolve(BIN_DIRECTORY, "+webServer.js"),
+		interpreter: "node",
 	},
 };
